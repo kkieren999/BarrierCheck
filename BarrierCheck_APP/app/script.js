@@ -104,7 +104,16 @@ function dateIsFuture(value) {
 }
 
 function isCurrentUserAdmin() {
-  return !!(currentUserProfile && (currentUserProfile.role === "admin" || currentUserProfile.admin === true));
+  var role = cleanText(currentUserProfile && currentUserProfile.role).toLowerCase();
+
+  return !!(
+    currentUserProfile &&
+    (
+      role === "admin" ||
+      currentUserProfile.admin === true ||
+      currentUserProfile.isAdmin === true
+    )
+  );
 }
 
 function getBillingAccessState(profile) {
