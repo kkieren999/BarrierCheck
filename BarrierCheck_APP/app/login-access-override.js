@@ -1,4 +1,4 @@
-// BarrierCheck Tinder-style modal auth flow: Google + phone.
+// BarrierCheck modal auth flow: Google + phone.
 (function () {
   var authMode = "signin";
   var activeConfirmation = null;
@@ -72,20 +72,36 @@
     return normalizeAuPhone(el ? el.value : "");
   }
 
+  function validateCreateDetails() {
+    var data = getSignupData();
+    if (!data.fullName || !data.email || !data.phone || !data.licenceNumber || !data.businessName) {
+      setLoginStatus("Enter your name, email, phone, licence number and business name before continuing.", true);
+      return false;
+    }
+    return true;
+  }
+
   function setView(view) {
     show("authOptionsView", view === "options");
     show("createDetailsView", view === "details");
     show("phoneNumberView", view === "phone");
     show("phoneCodeView", view === "code");
-    show("authModalBackBtn", view !== "options");
+    show("authModalBackBtn", view !== "options" || authMode === "create");
+
+    if (view === "details") {
+      setModalTitle("Create inspector account", "Add your details first, then choose Google or phone to verify your account.");
+      var nameInput = byId("signupName");
+      if (nameInput) setTimeout(function () { nameInput.focus(); }, 30);
+    }
 
     if (view === "options") {
-      setModalTitle(authMode === "create" ? "Create account" : "Sign in", authMode === "create" ? "Choose how you want to create your BarrierCheck account." : "Choose how you want to sign in to BarrierCheck.");
+      setModalTitle(authMode === "create" ? "Choose verification" : "Sign in", authMode === "create" ? "Continue with Google or verify your phone number." : "Choose how you want to sign in to BarrierCheck.");
     }
 
     if (view === "phone") {
       setModalTitle("What’s your number?", "");
       var phoneInput = byId("phoneModalNumber");
+      if (phoneInput && authMode === "create" && !phoneInput.value) phoneInput.value = getSignupData().phone;
       if (phoneInput) setTimeout(function () { phoneInput.focus(); }, 30);
       updatePhoneNextState();
     }
@@ -106,7 +122,7 @@
     if (phoneInput) phoneInput.value = "";
     clearCodeBoxes();
     show("authModalBackdrop", true);
-    setView("options");
+    setView(authMode === "create" ? "details" : "options");
     setLoginStatus(authMode === "create" ? "Create an account to start your free trial." : "Sign in to continue.", false);
   }
 
@@ -115,14 +131,12 @@
   }
 
   function goBack() {
-    if (!byId("phoneNumberView") || !byId("phoneCodeView")) {
-      setView("options");
-      return;
-    }
-    if (!byId("phoneCodeView").hidden) {
-      setView("phone");
-      return;
-    }
+    var codeView = byId("phoneCodeView");
+    var phoneView = byId("phoneNumberView");
+    var optionsView = byId("authOptionsView");
+    if (codeView && !codeView.hidden) return setView("phone");
+    if (phoneView && !phoneView.hidden) return setView("options");
+    if (optionsView && !optionsView.hidden && authMode === "create") return setView("details");
     setView("options");
   }
 
@@ -224,6 +238,7 @@
 
   function continueWithGoogle() {
     if (!loginAuth || !window.firebase) return;
+    if (authMode === "create" && !validateCreateDetails()) return;
     setPendingVisible(false);
     setLoginStatus("Opening Google...", false);
     loginAuth
@@ -242,6 +257,7 @@
   }
 
   function continueWithPhone() {
+    if (authMode === "create" && !validateCreateDetails()) return;
     setView("phone");
   }
 
@@ -391,6 +407,7 @@
     bindButton("authModalBackBtn", goBack);
     bindButton("googleModalBtn", continueWithGoogle);
     bindButton("phoneModalStartBtn", continueWithPhone);
+    bindButton("createDetailsNextBtn", function () { if (validateCreateDetails()) setView("options"); });
     bindButton("phoneModalSendBtn", sendPhoneCode);
     bindButton("phoneModalVerifyBtn", verifyPhoneCode);
     bindButton("phoneModalResendBtn", sendPhoneCode);
