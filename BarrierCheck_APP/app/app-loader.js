@@ -8,13 +8,18 @@
     })
     .then(function (html) {
       var baseTag = '<base href="/BarrierCheck_APP/app/">';
-      var configScript = '<script defer src="/BarrierCheck_APP/app/firebase-config.js?v=20260628barriercheck32290"><\\/script>';
-      var accessScript = '<script defer src="/BarrierCheck_APP/app/app-access-override.js?v=20260628access"><\\/script>';
+      var configScript = '<script src="/BarrierCheck_APP/app/firebase-config.js?v=20260628barriercheck32290"><\\/script>';
+      var accessScript = '<script src="/BarrierCheck_APP/app/app-access-override.js?v=20260628access2"><\\/script>';
+
       html = html.replace('<head>', '<head>\n' + baseTag);
-      html = html.replace('</head>', configScript + '\n' + accessScript + '\n</head>');
+      html = html.replace(/<script\s+defer=""\s+src=/g, '<script src=');
+      html = html.replace(/<script\s+defer\s+src=/g, '<script src=');
+      html = html.replace('<script src="./script.js?v=20260616admin4"></script>', configScript + '\n<script src="./script.js?v=20260616admin4"></script>\n' + accessScript);
+
       document.open();
       document.write(html);
       document.close();
+
       if (window.history && window.history.replaceState) {
         window.history.replaceState(null, '', '/app/' + window.location.search + window.location.hash);
       }
