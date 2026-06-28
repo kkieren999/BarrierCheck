@@ -7,193 +7,133 @@
   <link rel="canonical" href="https://barriercheck.com.au/app/login/" />
   <link rel="stylesheet" href="/BarrierCheck_APP/app/styles.css?v=20260616barriercheck1" />
   <style>
-    .login-mode-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 18px 0; padding: 6px; border-radius: 999px; background: #edf7ff; }
-    .login-mode-tabs button { border: 0; border-radius: 999px; padding: 11px 12px; background: transparent; color: #52657e; font: inherit; font-weight: 900; cursor: pointer; }
-    .login-mode-tabs button.active { color: #fff; background: linear-gradient(135deg, #03286a, #0d82d8); box-shadow: 0 10px 24px rgba(3,40,106,.18); }
-    .login-panel-note { margin: 0 0 16px; color: #52657e; line-height: 1.45; }
-    .signup-grid { display: grid; gap: 12px; }
-    .trial-note-box { margin: 14px 0; padding: 13px 14px; border-radius: 18px; background: #f2f9ff; color: #17304f; font-size: .92rem; line-height: 1.45; }
-    .trial-note-box strong { display: block; color: #03286a; margin-bottom: 4px; }
-    .auth-button-stack { display: grid; gap: 10px; }
-    .phone-modern-card { display: grid; gap: 12px; padding: 16px; border: 1px solid rgba(13,130,216,.14); border-radius: 22px; background: #f8fcff; }
-    .phone-step-title { margin: 0; color: #03286a; font-size: 1.05rem; }
-    .phone-step-copy { margin: 0; color: #52657e; font-size: .92rem; line-height: 1.45; }
-    .phone-input-wrap { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 8px; border: 1px solid rgba(3,40,106,.16); border-radius: 16px; padding: 0 12px; background: #fff; }
-    .phone-input-wrap span { color: #17304f; font-weight: 900; white-space: nowrap; }
-    .phone-input-wrap input { width: 100%; border: 0; outline: 0; padding: 14px 0; font: inherit; background: transparent; }
-    .sms-code-input { width: 100%; box-sizing: border-box; border: 1px solid rgba(3,40,106,.16); border-radius: 18px; padding: 16px; background: #fff; font: inherit; font-size: 1.45rem; font-weight: 900; letter-spacing: .34em; text-align: center; }
-    .phone-link-row { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
-    .phone-link-row button { border: 0; background: transparent; color: #0d82d8; font: inherit; font-weight: 900; cursor: pointer; padding: 4px 6px; }
-    .phone-muted-button { width: 100%; border: 1px solid rgba(3,40,106,.12); border-radius: 999px; padding: 13px 18px; background: #fff; color: #03286a; font: inherit; font-weight: 900; cursor: pointer; }
+    .auth-hero-page { min-height: 100vh; display: grid; place-items: center; padding: 28px; background: radial-gradient(circle at top left, rgba(13,130,216,.22), transparent 34%), linear-gradient(135deg, #031b44, #062d6b 48%, #0f7fca); color: #fff; }
+    .auth-hero-card { width: min(760px, 100%); text-align: center; padding: 56px 28px; border: 1px solid rgba(255,255,255,.18); border-radius: 34px; background: rgba(255,255,255,.08); box-shadow: 0 30px 80px rgba(0,0,0,.28); backdrop-filter: blur(14px); }
+    .auth-hero-logo { width: 86px; height: 86px; object-fit: contain; margin-bottom: 16px; filter: drop-shadow(0 12px 28px rgba(0,0,0,.2)); }
+    .auth-hero-card h1 { margin: 0; font-size: clamp(2.8rem, 9vw, 6rem); line-height: .95; letter-spacing: -.06em; }
+    .auth-hero-card p { max-width: 560px; margin: 18px auto 0; color: rgba(255,255,255,.86); font-size: 1.08rem; line-height: 1.55; }
+    .auth-hero-actions { display: flex; justify-content: center; flex-wrap: wrap; gap: 12px; margin-top: 30px; }
+    .hero-primary-btn, .hero-secondary-btn { border: 0; border-radius: 999px; padding: 14px 24px; font: inherit; font-weight: 900; cursor: pointer; min-width: 168px; }
+    .hero-primary-btn { color: #03286a; background: #fff; box-shadow: 0 18px 34px rgba(0,0,0,.18); }
+    .hero-secondary-btn { color: #fff; background: rgba(255,255,255,.16); border: 1px solid rgba(255,255,255,.28); }
+    .auth-modal-backdrop { position: fixed; inset: 0; z-index: 9999; display: grid; place-items: center; padding: 18px; background: rgba(1,10,27,.62); backdrop-filter: blur(10px); }
+    .auth-modal-backdrop[hidden] { display: none; }
+    .auth-modal { position: relative; width: min(430px, 100%); max-height: calc(100vh - 36px); overflow: auto; border-radius: 26px; background: #fff; color: #0c1b2a; box-shadow: 0 28px 80px rgba(0,0,0,.28); padding: 28px; text-align: center; }
+    .auth-modal-icon { width: 44px; height: 44px; object-fit: contain; margin-bottom: 12px; }
+    .auth-modal h2 { margin: 0; color: #102033; font-size: 2rem; letter-spacing: -.04em; }
+    .auth-modal-subtitle { margin: 10px auto 18px; max-width: 330px; color: #52657e; line-height: 1.45; }
+    .auth-modal-close, .auth-modal-back { position: absolute; top: 14px; width: 34px; height: 34px; border: 0; background: transparent; color: #718096; font-size: 30px; line-height: 1; cursor: pointer; }
+    .auth-modal-close { right: 14px; }
+    .auth-modal-back { left: 14px; font-size: 34px; }
+    .auth-provider-stack { display: grid; gap: 12px; margin-top: 16px; }
+    .auth-provider-btn { width: 100%; display: grid; grid-template-columns: 32px 1fr 32px; align-items: center; gap: 8px; border: 1px solid #d6dce8; border-radius: 999px; background: #fff; color: #122033; padding: 13px 16px; font: inherit; font-weight: 900; cursor: pointer; }
+    .auth-provider-btn .provider-icon { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; font-weight: 900; }
+    .auth-provider-btn.primary { border: 0; color: #fff; background: linear-gradient(135deg, #03286a, #0d82d8); }
+    .auth-provider-btn.phone { background: #fff; }
+    .auth-legal-copy { margin: 6px auto 0; color: #52657e; font-size: .88rem; line-height: 1.45; }
+    .auth-legal-copy a { color: #0d6fd1; font-weight: 800; }
+    .modal-view[hidden] { display: none; }
+    .phone-number-grid { display: grid; grid-template-columns: 100px 1fr; gap: 10px; margin-top: 18px; text-align: left; }
+    .phone-number-grid label { display: grid; gap: 8px; font-size: .9rem; color: #102033; }
+    .country-box, .phone-box { height: 52px; box-sizing: border-box; border: 1px solid #aeb8c8; border-radius: 8px; background: #f7f9fc; padding: 0 12px; font: inherit; }
+    .country-box { display: flex; align-items: center; justify-content: space-between; color: #52657e; font-weight: 800; }
+    .phone-box { width: 100%; background: #fff; outline: 0; }
+    .modal-primary-action { width: 100%; border: 0; border-radius: 999px; padding: 15px 18px; margin-top: 22px; background: linear-gradient(135deg, #03286a, #0d82d8); color: #fff; font: inherit; font-weight: 900; cursor: pointer; }
+    .modal-primary-action:disabled { background: #e4e8ef; color: #8a94a6; cursor: not-allowed; }
+    .phone-help { margin: 14px auto 0; color: #52657e; font-size: .9rem; line-height: 1.45; }
+    .code-box-row { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; margin: 22px 0 14px; }
+    .code-box { height: 52px; width: 100%; box-sizing: border-box; border: 1px solid #aeb8c8; border-radius: 8px; background: #f7f9fc; text-align: center; font: inherit; font-size: 1.35rem; font-weight: 900; outline: 0; }
+    .modal-link-row { display: flex; justify-content: center; flex-wrap: wrap; gap: 12px; margin-top: 8px; }
+    .modal-link-row button { border: 0; background: transparent; color: #0d6fd1; font: inherit; font-weight: 900; cursor: pointer; }
+    .profile-mini-form { display: grid; gap: 10px; margin-top: 16px; text-align: left; }
+    .profile-mini-form label { display: grid; gap: 6px; font-size: .88rem; color: #102033; font-weight: 800; }
+    .profile-mini-form input { height: 46px; box-sizing: border-box; border: 1px solid #d6dce8; border-radius: 12px; padding: 0 12px; font: inherit; outline: 0; }
     #phoneRecaptcha { min-height: 1px; }
+    @media (max-width: 520px) { .auth-hero-page { padding: 16px; } .auth-hero-card { padding: 38px 18px; border-radius: 28px; } .auth-modal { padding: 26px 20px; } .phone-number-grid { grid-template-columns: 96px 1fr; } }
   </style>
   <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js" defer></script>
   <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js" defer></script>
   <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js" defer></script>
   <script src="/BarrierCheck_APP/app/login.js?v=20260628safephone1" defer></script>
   <script src="/BarrierCheck_APP/app/firebase-config.js?v=20260628barriercheck32290" defer></script>
-  <script src="/BarrierCheck_APP/app/login-access-override.js?v=20260628phone2" defer></script>
-  <script defer>
-    document.addEventListener("DOMContentLoaded", function () {
-      function showTab(create) {
-        var signInPanel = document.getElementById("signInPanel");
-        var createPanel = document.getElementById("createPanel");
-        var signInTab = document.getElementById("signInTabBtn");
-        var createTab = document.getElementById("createTabBtn");
-        if (signInPanel) signInPanel.hidden = create;
-        if (createPanel) createPanel.hidden = !create;
-        if (signInTab) {
-          signInTab.classList.toggle("active", !create);
-          signInTab.setAttribute("aria-selected", create ? "false" : "true");
-        }
-        if (createTab) {
-          createTab.classList.toggle("active", create);
-          createTab.setAttribute("aria-selected", create ? "true" : "false");
-        }
-      }
-      var signInTab = document.getElementById("signInTabBtn");
-      var createTab = document.getElementById("createTabBtn");
-      if (signInTab) signInTab.addEventListener("click", function () { showTab(false); });
-      if (createTab) createTab.addEventListener("click", function () { showTab(true); });
-      var signupForm = document.getElementById("signupForm");
-      if (signupForm) signupForm.addEventListener("submit", function (event) { event.preventDefault(); });
-      var params = new URLSearchParams(window.location.search || "");
-      showTab(params.has("signup") || params.has("trial"));
-    });
-  </script>
+  <script src="/BarrierCheck_APP/app/login-access-override.js?v=20260628modal1" defer></script>
 </head>
 <body class="login-page-body">
-  <main class="login-shell" aria-label="BarrierCheck sign in">
-    <section class="login-card">
-      <div class="login-brand">
-        <img class="login-logo" src="/BarrierCheck_APP/app/assets/logo/BarrierCheck_logo_no%20text.png" alt="BarrierCheck logo" />
-        <div>
-          <h1><span class="iron">Barrier</span><span class="gate">Check</span></h1>
-          <p>Pool Inspection Software</p>
+  <main class="auth-hero-page" aria-label="BarrierCheck sign in">
+    <section class="auth-hero-card">
+      <img class="auth-hero-logo" src="/BarrierCheck_APP/app/assets/logo/BarrierCheck_logo_no%20text.png" alt="BarrierCheck logo" />
+      <h1>BarrierCheck</h1>
+      <p>Pool inspection software for creating inspections, organising evidence photos and preparing professional reports.</p>
+      <div class="auth-hero-actions">
+        <button id="landingCreateBtn" class="hero-primary-btn" type="button">Create account</button>
+        <button id="landingSignInBtn" class="hero-secondary-btn" type="button">Sign in</button>
+      </div>
+    </section>
+  </main>
+
+  <form id="emailLoginForm" hidden aria-hidden="true">
+    <input id="loginEmail" type="email" tabindex="-1" />
+    <input id="loginPassword" type="password" tabindex="-1" />
+  </form>
+  <button id="createAccountBtn" type="button" hidden aria-hidden="true" tabindex="-1"></button>
+
+  <div id="authModalBackdrop" class="auth-modal-backdrop" hidden>
+    <section class="auth-modal" role="dialog" aria-modal="true" aria-labelledby="authModalTitle">
+      <button id="authModalBackBtn" class="auth-modal-back" type="button" aria-label="Go back" hidden>‹</button>
+      <button id="authModalCloseBtn" class="auth-modal-close" type="button" aria-label="Close">×</button>
+      <img class="auth-modal-icon" src="/BarrierCheck_APP/app/assets/logo/BarrierCheck_logo_no%20text.png" alt="" />
+      <h2 id="authModalTitle">Create account</h2>
+      <p id="authModalSubtitle" class="auth-modal-subtitle">Choose how you want to continue.</p>
+
+      <div id="authOptionsView" class="modal-view">
+        <p class="auth-legal-copy">By tapping Continue, you agree to our <a href="/terms/" target="_blank" rel="noopener">Terms</a>. Learn how we process your data in our <a href="/privacy/" target="_blank" rel="noopener">Privacy Policy</a> and <a href="/refunds/" target="_blank" rel="noopener">Refund Policy</a>.</p>
+        <div class="auth-provider-stack">
+          <button id="googleModalBtn" class="auth-provider-btn primary" type="button"><span class="provider-icon">G</span><span>Continue with Google</span><span></span></button>
+          <button id="phoneModalStartBtn" class="auth-provider-btn phone" type="button"><span class="provider-icon">☎</span><span>Continue with phone number</span><span></span></button>
         </div>
       </div>
 
-      <div class="login-intro">
-        <h2>Welcome to BarrierCheck</h2>
-        <p>Sign in or create an inspector account with Google or phone.</p>
-      </div>
-
-      <form id="emailLoginForm" hidden aria-hidden="true">
-        <input id="loginEmail" type="email" tabindex="-1" />
-        <input id="loginPassword" type="password" tabindex="-1" />
-      </form>
-      <button id="createAccountBtn" type="button" hidden aria-hidden="true" tabindex="-1"></button>
-
-      <div class="login-mode-tabs" role="tablist" aria-label="Choose sign in or create account">
-        <button id="signInTabBtn" class="active" type="button" role="tab" aria-selected="true" aria-controls="signInPanel">Sign in</button>
-        <button id="createTabBtn" type="button" role="tab" aria-selected="false" aria-controls="createPanel">Create account</button>
-      </div>
-
-      <section id="signInPanel" role="tabpanel" aria-labelledby="signInTabBtn">
-        <p class="login-panel-note">Use Google or a phone SMS code to access cloud-saved inspections.</p>
-        <div class="auth-button-stack">
-          <button id="googleSignInBtn" class="login-google-btn" type="button">Continue with Google</button>
-
-          <div class="phone-modern-card">
-            <button id="phoneSignInStartBtn" class="phone-muted-button" type="button">Continue with phone</button>
-
-            <div id="phoneSignInRequestStep" hidden>
-              <h3 class="phone-step-title">Sign in with phone</h3>
-              <p class="phone-step-copy">Enter your mobile number and we’ll text you a one-time code.</p>
-              <label class="login-field">
-                <span>Mobile number</span>
-                <div class="phone-input-wrap">
-                  <span>🇦🇺 +61</span>
-                  <input id="phoneSignInNumber" type="tel" inputmode="tel" autocomplete="tel" placeholder="412 345 678" />
-                </div>
-              </label>
-              <button id="phoneSignInSendBtn" class="login-primary-btn" type="button">Send code</button>
-              <div class="phone-link-row">
-                <button id="phoneSignInBackBtn" type="button">Back</button>
-              </div>
-            </div>
-
-            <div id="phoneSignInCodeStep" hidden>
-              <h3 class="phone-step-title">Enter your code</h3>
-              <p class="phone-step-copy">We sent a 6-digit code to <strong id="phoneSignInDisplay">your phone</strong>.</p>
-              <input id="phoneSignInCode" class="sms-code-input" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="000000" />
-              <button id="phoneSignInVerifyBtn" class="login-primary-btn" type="button">Verify and sign in</button>
-              <div class="phone-link-row">
-                <button id="phoneSignInResendBtn" type="button">Resend code</button>
-                <button id="phoneSignInChangeBtn" type="button">Change number</button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section id="createPanel" role="tabpanel" aria-labelledby="createTabBtn" hidden>
-        <p class="login-panel-note">Enter your inspector details, then create your account with Google or phone.</p>
-
-        <form id="signupForm" class="login-form signup-grid">
-          <label class="login-field">
-            <span>Full name</span>
-            <input id="signupName" type="text" autocomplete="name" required />
-          </label>
-
-          <label class="login-field">
-            <span>Email address for reports and support</span>
-            <input id="signupEmail" type="email" autocomplete="email" required />
-          </label>
-
-          <label class="login-field">
-            <span>Phone number</span>
-            <div class="phone-input-wrap">
-              <span>🇦🇺 +61</span>
-              <input id="signupPhone" type="tel" inputmode="tel" autocomplete="tel" placeholder="412 345 678" required />
-            </div>
-          </label>
-
-          <label class="login-field">
-            <span>QBCC / pool safety inspector licence number</span>
-            <input id="signupLicence" type="text" autocomplete="off" required />
-          </label>
-
-          <label class="login-field">
-            <span>Business name</span>
-            <input id="signupBusiness" type="text" autocomplete="organization" required />
-          </label>
-
-          <div class="trial-note-box">
-            <strong>How access works</strong>
-            You can enter the app straight away. Complete your inspector profile before starting real inspections. Your first 3 inspections are free while we verify your inspector details.
-          </div>
-
-          <label class="legal-check-row">
-            <input id="legalAcceptCheck" type="checkbox" />
-            <span>I agree to the <a href="/terms/" target="_blank" rel="noopener">Terms of Service</a>, <a href="/privacy/" target="_blank" rel="noopener">Privacy Policy</a>, and <a href="/refunds/" target="_blank" rel="noopener">Refund Policy</a>.</span>
-          </label>
-
-          <label class="legal-check-row optional">
-            <input id="marketingOptInCheck" type="checkbox" />
-            <span>Send me BarrierCheck product updates and marketing emails. I can unsubscribe later.</span>
-          </label>
+      <div id="createDetailsView" class="modal-view" hidden>
+        <p class="auth-modal-subtitle">Add your inspector details so your account can be set up correctly.</p>
+        <form id="signupForm" class="profile-mini-form">
+          <label>Full name<input id="signupName" type="text" autocomplete="name" /></label>
+          <label>Email address<input id="signupEmail" type="email" autocomplete="email" /></label>
+          <label>Phone number<input id="signupPhone" type="tel" inputmode="tel" autocomplete="tel" placeholder="412 345 678" /></label>
+          <label>QBCC / pool safety inspector licence<input id="signupLicence" type="text" autocomplete="off" /></label>
+          <label>Business name<input id="signupBusiness" type="text" autocomplete="organization" /></label>
+          <input id="legalAcceptCheck" type="checkbox" checked hidden />
+          <input id="marketingOptInCheck" type="checkbox" hidden />
         </form>
+        <button id="createDetailsNextBtn" class="modal-primary-action" type="button">Continue</button>
+      </div>
 
-        <div class="auth-button-stack">
-          <button id="googleCreateBtn" class="login-google-btn" type="button">Create with Google</button>
-
-          <div class="phone-modern-card">
-            <button id="phoneCreateStartBtn" class="phone-muted-button" type="button">Create with phone</button>
-
-            <div id="phoneCreateCodeStep" hidden>
-              <h3 class="phone-step-title">Verify your phone</h3>
-              <p class="phone-step-copy">We sent a 6-digit code to <strong id="phoneCreateDisplay">your phone</strong>.</p>
-              <input id="phoneCreateCode" class="sms-code-input" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="000000" />
-              <button id="phoneCreateVerifyBtn" class="login-primary-btn" type="button">Verify and create account</button>
-              <div class="phone-link-row">
-                <button id="phoneCreateResendBtn" type="button">Resend code</button>
-                <button id="phoneCreateChangeBtn" type="button">Change number</button>
-              </div>
-            </div>
-          </div>
+      <div id="phoneNumberView" class="modal-view" hidden>
+        <p class="auth-modal-subtitle">We’ll text you a one-time code to verify your phone number.</p>
+        <div class="phone-number-grid">
+          <label>Country<div class="country-box">AU +61 <span>⌄</span></div></label>
+          <label>Phone number<input id="phoneModalNumber" class="phone-box" type="tel" inputmode="tel" autocomplete="tel" /></label>
         </div>
-      </section>
+        <p class="phone-help">Use your Australian mobile number. Message and data rates may apply.</p>
+        <button id="phoneModalSendBtn" class="modal-primary-action" type="button" disabled>Next</button>
+      </div>
+
+      <div id="phoneCodeView" class="modal-view" hidden>
+        <p id="phoneCodeSentText" class="auth-modal-subtitle">We sent a one-time passcode to your phone. This code will expire shortly.</p>
+        <div id="phoneCodeBoxes" class="code-box-row" aria-label="SMS verification code">
+          <input class="code-box" type="text" inputmode="numeric" maxlength="1" />
+          <input class="code-box" type="text" inputmode="numeric" maxlength="1" />
+          <input class="code-box" type="text" inputmode="numeric" maxlength="1" />
+          <input class="code-box" type="text" inputmode="numeric" maxlength="1" />
+          <input class="code-box" type="text" inputmode="numeric" maxlength="1" />
+          <input class="code-box" type="text" inputmode="numeric" maxlength="1" />
+        </div>
+        <input id="phoneModalCode" type="hidden" />
+        <button id="phoneModalVerifyBtn" class="modal-primary-action" type="button" disabled>Next</button>
+        <div class="modal-link-row">
+          <button id="phoneModalResendBtn" type="button">Resend via SMS</button>
+          <button id="phoneModalChangeBtn" type="button">Change number</button>
+        </div>
+      </div>
 
       <div id="pendingBox" class="login-pending-box" hidden>
         <strong>Account unavailable</strong>
@@ -202,20 +142,8 @@
       </div>
 
       <div id="phoneRecaptcha"></div>
-
-      <p id="loginStatus" class="login-status">Checking Firebase...</p>
-
-      <p class="login-note">
-        New accounts are for pool safety inspectors. We verify inspector details before official/ongoing use.
-      </p>
-
-      <nav class="legal-link-row" aria-label="Legal and support links">
-        <a href="/privacy/" target="_blank" rel="noopener">Privacy</a>
-        <a href="/terms/" target="_blank" rel="noopener">Terms</a>
-        <a href="/refunds/" target="_blank" rel="noopener">Refunds</a>
-        <a href="/contact/" target="_blank" rel="noopener">Support</a>
-      </nav>
+      <p id="loginStatus" class="login-status">Sign in or create an account to continue.</p>
     </section>
-  </main>
+  </div>
 </body>
 </html>
