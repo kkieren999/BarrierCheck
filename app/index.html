@@ -12,6 +12,7 @@
     .loading-card p { margin: 8px 0 0; color: #52657e; }
     .loading-card a { color: #0d82d8; }
   </style>
+  <script src="/BarrierCheck_APP/app/app-loader.js?v=20260628access" defer></script>
 </head>
 <body>
   <div class="loading">
@@ -20,33 +21,6 @@
       <p>Loading the inspection app.</p>
     </div>
   </div>
-
-  <script>
-    (function () {
-      var source = "/BarrierCheck_APP/app/index.html?v=20260628barriercheck32290";
-      fetch(source, { cache: "no-store" })
-        .then(function (response) {
-          if (!response.ok) throw new Error("Could not load the BarrierCheck app.");
-          return response.text();
-        })
-        .then(function (html) {
-          var baseTag = '<base href="/BarrierCheck_APP/app/">';
-          var configScript = '<script defer src="/BarrierCheck_APP/app/firebase-config.js?v=20260628barriercheck32290"><\\/script>';
-          html = html.replace('<head>', '<head>\n' + baseTag);
-          html = html.replace('</head>', configScript + '\n</head>');
-          document.open();
-          document.write(html);
-          document.close();
-          if (window.history && window.history.replaceState) {
-            window.history.replaceState(null, '', '/app/' + window.location.search + window.location.hash);
-          }
-        })
-        .catch(function (error) {
-          document.body.innerHTML = '<div class="loading"><div class="loading-card"><strong>Could not open BarrierCheck.</strong><p>' + error.message + '</p><p><a href="/app/login/">Return to login</a></p></div></div>';
-        });
-    })();
-  </script>
-
   <noscript>
     <div class="loading">
       <div class="loading-card">
