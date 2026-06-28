@@ -112,10 +112,16 @@ service cloud.firestore {
       }
     }
 
-    // Firebase Trigger Email extension watches this collection.
-    // Only admins can queue or view email documents from the client app.
     match /email/{emailId} {
       allow create, read, update, delete: if isAdmin();
+    }
+
+    match /trialEntitlements/{entitlementId} {
+      allow read, write: if isAdmin();
+    }
+
+    match /accountDeletionRecords/{recordId} {
+      allow read, write: if isAdmin();
     }
 
     match /{document=**} {
