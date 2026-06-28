@@ -1,12 +1,28 @@
-// Login access patch for BarrierCheck Google + phone free-trial signup flow.
+// Login access patch for BarrierCheck Google + modern phone free-trial signup flow.
 (function () {
   var signInConfirmation = null;
   var createConfirmation = null;
   var recaptchaVerifier = null;
   var recaptchaWidgetId = null;
+  var lastSignInPhone = "";
+  var lastCreatePhone = "";
 
   function clean(value) {
     return value === undefined || value === null ? "" : String(value).trim();
+  }
+
+  function byId(id) {
+    return document.getElementById(id);
+  }
+
+  function hide(id, shouldHide) {
+    var el = byId(id);
+    if (el) el.hidden = !!shouldHide;
+  }
+
+  function setText(id, text) {
+    var el = byId(id);
+    if (el) el.textContent = text || "";
   }
 
   function defaultProfileIcon(user) {
@@ -18,7 +34,7 @@
 
   function getSignupData() {
     function val(id) {
-      var el = document.getElementById(id);
+      var el = byId(id);
       return el ? clean(el.value) : "";
     }
     return {
@@ -40,8 +56,39 @@
   }
 
   function phoneInputValue(id) {
-    var el = document.getElementById(id);
+    var el = byId(id);
     return normalizeAuPhone(el ? el.value : "");
+  }
+
+  function formatPhoneForDisplay(phone) {
+    phone = normalizeAuPhone(phone);
+    if (phone.indexOf("+61") === 0 && phone.length >= 12) {
+      return "+61 " + phone.slice(3, 6) + " " + phone.slice(6, 9) + " " + phone.slice(9);
+    }
+    return phone || "your phone";
+  }
+
+  function showSignInPhoneStep(step) {
+    hide("phoneSignInStartBtn", step !== "start");
+    hide("phoneSignInRequestStep", step !== "request");
+    hide("phoneSignInCodeStep", step !== "code");
+    if (step === "request") {
+      var phoneInput = byId("phoneSignInNumber");
+      if (phoneInput) setTimeout(function () { phoneInput.focus(); }, 30);
+    }
+    if (step === "code") {
+      var codeInput = byId("phoneSignInCode");
+      if (codeInput) setTimeout(function () { codeInput.focus(); }, 30);
+    }
+  }
+
+  function showCreatePhoneStep(step) {
+    hide("phoneCreateStartBtn", step !== "start");
+    hide("phoneCreateCodeStep", step !== "code");
+    if (step === "code") {
+      var codeInput = byId("phoneCreateCode");
+      if (codeInput) setTimeout(function () { codeInput.focus(); }, 30);
+    }
   }
 
   function isProfileComplete(profile) {
@@ -105,7 +152,7 @@
 
   function ensureRecaptcha() {
     if (recaptchaVerifier) return Promise.resolve(recaptchaVerifier);
-    var container = document.getElementById("phoneRecaptcha");
+    var container = byId("phoneRecaptcha");
     if (!container) return Promise.reject(new Error("Phone verification container is missing."));
     recaptchaVerifier = new firebase.auth.RecaptchaVerifier("phoneRecaptcha", { size: "invisible" });
     return recaptchaVerifier.render().then(function (widgetId) {
@@ -187,23 +234,27 @@
       setLoginStatus("Enter your phone number first.", true);
       return;
     }
+    lastSignInPhone = phone;
     setPendingVisible(false);
     setLoginStatus("Sending SMS code...", false);
     ensureRecaptcha()
       .then(function (verifier) { return loginAuth.signInWithPhoneNumber(phone, verifier); })
       .then(function (confirmation) {
         signInConfirmation = confirmation;
-        setLoginStatus("SMS code sent. Enter the code and press Verify code.", false);
+        setText("phoneSignInDisplay", formatPhoneForDisplay(phone));
+        showSignInPhoneStep("code");
+        setLoginStatus("SMS code sent.", false);
       })
       .catch(function (error) {
         console.error(error);
         resetRecaptcha();
+        showSignInPhoneStep("request");
         setLoginStatus("Could not send SMS code: " + error.message, true);
       });
   };
 
   window.verifyPhoneSignInCode = function () {
-    var codeEl = document.getElementById("phoneSignInCode");
+    var codeEl = byId("phoneSignInCode");
     var code = clean(codeEl ? codeEl.value : "");
     if (!signInConfirmation) {
       setLoginStatus("Send an SMS code first.", true);
@@ -229,23 +280,27 @@
       setLoginStatus("Enter your phone number first.", true);
       return;
     }
+    lastCreatePhone = phone;
     setPendingVisible(false);
     setLoginStatus("Sending SMS code...", false);
     ensureRecaptcha()
       .then(function (verifier) { return loginAuth.signInWithPhoneNumber(phone, verifier); })
       .then(function (confirmation) {
         createConfirmation = confirmation;
-        setLoginStatus("SMS code sent. Enter the code and press Verify and create account.", false);
+        setText("phoneCreateDisplay", formatPhoneForDisplay(phone));
+        showCreatePhoneStep("code");
+        setLoginStatus("SMS code sent.", false);
       })
       .catch(function (error) {
         console.error(error);
         resetRecaptcha();
+        showCreatePhoneStep("start");
         setLoginStatus("Could not send SMS code: " + error.message, true);
       });
   };
 
   window.verifyPhoneCreateCode = function () {
-    var codeEl = document.getElementById("phoneCreateCode");
+    var codeEl = byId("phoneCreateCode");
     var code = clean(codeEl ? codeEl.value : "");
     if (!createConfirmation) {
       setLoginStatus("Send an SMS code first.", true);
@@ -302,7 +357,7 @@
   };
 
   function bindButton(id, handler) {
-    var button = document.getElementById(id);
+    var button = byId(id);
     if (!button) return;
     button.addEventListener("click", function (event) {
       event.preventDefault();
@@ -312,11 +367,26 @@
   }
 
   document.addEventListener("DOMContentLoaded", function () {
+    showSignInPhoneStep("start");
+    showCreatePhoneStep("start");
+
     bindButton("googleSignInBtn", window.signInWithGoogleOnly);
     bindButton("googleCreateBtn", window.createAccountWithGoogle);
+
+    bindButton("phoneSignInStartBtn", function () { showSignInPhoneStep("request"); });
+    bindButton("phoneSignInBackBtn", function () { showSignInPhoneStep("start"); });
     bindButton("phoneSignInSendBtn", window.sendPhoneSignInCode);
     bindButton("phoneSignInVerifyBtn", window.verifyPhoneSignInCode);
-    bindButton("phoneCreateSendBtn", window.sendPhoneCreateCode);
+    bindButton("phoneSignInResendBtn", window.sendPhoneSignInCode);
+    bindButton("phoneSignInChangeBtn", function () { showSignInPhoneStep("request"); });
+
+    bindButton("phoneCreateStartBtn", window.sendPhoneCreateCode);
+    bindButton("phoneCreateResendBtn", window.sendPhoneCreateCode);
     bindButton("phoneCreateVerifyBtn", window.verifyPhoneCreateCode);
+    bindButton("phoneCreateChangeBtn", function () {
+      showCreatePhoneStep("start");
+      var phone = byId("signupPhone");
+      if (phone) phone.focus();
+    });
   });
 })();
