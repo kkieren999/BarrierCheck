@@ -25,11 +25,43 @@ service cloud.firestore {
         );
     }
 
+    function hasNoAdminCreateFields() {
+      return (!request.resource.data.keys().hasAny(["admin"]) || request.resource.data.admin == false)
+        && (!request.resource.data.keys().hasAny(["isAdmin"]) || request.resource.data.isAdmin == false)
+        && !request.resource.data.keys().hasAny([
+          "approvedAt",
+          "approvedBy",
+          "verifiedAt",
+          "rejectedAt",
+          "rejectedBy",
+          "suspendedAt",
+          "suspendedBy",
+          "manualPaid",
+          "stripeCustomerId",
+          "stripeSubscriptionId",
+          "currentPeriodEndsAt",
+          "emailLog"
+        ]);
+    }
+
+    function isFreeTrialCreate() {
+      return (!request.resource.data.keys().hasAny(["billingAccess"])
+          || request.resource.data.billingAccess in ["free_inspections", "pending_verification"])
+        && (!request.resource.data.keys().hasAny(["subscriptionStatus"])
+          || request.resource.data.subscriptionStatus in ["free_inspections", "pending_verification"])
+        && (!request.resource.data.keys().hasAny(["freeInspectionLimit"])
+          || request.resource.data.freeInspectionLimit <= 3)
+        && (!request.resource.data.keys().hasAny(["freeInspectionsUsed"])
+          || request.resource.data.freeInspectionsUsed == 0);
+    }
+
     function isCreatingOwnPendingProfile(userId) {
       return isOwner(userId)
         && request.resource.data.approved == false
         && request.resource.data.role == "pending"
-        && request.resource.data.verificationStatus == "pending";
+        && request.resource.data.verificationStatus == "pending"
+        && hasNoAdminCreateFields()
+        && isFreeTrialCreate();
     }
 
     function isSafeOwnProfileUpdate(userId) {
