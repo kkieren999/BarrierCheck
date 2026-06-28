@@ -54,6 +54,8 @@
     .provider-icon { display:grid; place-items:center; width:26px; height:26px; border-radius:50%; font-weight:900; }
     .auth-legal-copy { margin:6px auto 0; color:var(--bc-muted); font-size:.88rem; line-height:1.45; }
     .auth-legal-copy a { color:#0d6fd1; font-weight:800; }
+    .trial-policy-note { margin:12px 0 0; padding:12px 14px; border-radius:14px; background:var(--bc-soft); border:1px solid #dcecf9; color:#31516f; font-size:.88rem; line-height:1.45; text-align:left; }
+    .trial-policy-note strong { display:block; color:var(--bc-navy); margin-bottom:3px; }
     .phone-number-grid { display:grid; grid-template-columns:100px 1fr; gap:10px; margin-top:18px; text-align:left; }
     .phone-number-grid label { display:grid; gap:8px; font-size:.9rem; color:var(--bc-ink); }
     .country-box,.phone-box { height:52px; border:1px solid #aeb8c8; border-radius:8px; background:#f7f9fc; padding:0 12px; font:inherit; }
@@ -105,7 +107,7 @@
           <button id="landingCreateBtn" class="secondary-action" type="button">Create inspector account</button>
         </div>
         <div class="auth-divider">secure access</div>
-        <div class="trial-callout">New inspector accounts can enter the app straight away. Your first 3 inspections are free while your inspector details are verified.</div>
+        <div class="trial-callout">New inspector accounts can enter the app straight away. Your first 3 inspections are free once per inspector/licence while your details are verified. Deleting your account does not reset free-trial eligibility.</div>
         <nav class="legal-row" aria-label="Legal and support links">
           <a href="/privacy/" target="_blank" rel="noopener">Privacy</a>
           <a href="/terms/" target="_blank" rel="noopener">Terms</a>
@@ -149,6 +151,7 @@
           <input id="legalAcceptCheck" type="checkbox" checked hidden />
           <input id="marketingOptInCheck" type="checkbox" hidden />
         </form>
+        <div class="trial-policy-note"><strong>Free trial eligibility</strong>First 3 inspections are free once per inspector/licence. Deleting your account does not reset free-trial eligibility.</div>
         <button id="createDetailsNextBtn" class="modal-primary-action" type="button">Continue</button>
       </div>
 
