@@ -15,18 +15,24 @@
     .trial-note-box { margin: 14px 0; padding: 13px 14px; border-radius: 18px; background: #f2f9ff; color: #17304f; font-size: .92rem; line-height: 1.45; }
     .trial-note-box strong { display: block; color: #03286a; margin-bottom: 4px; }
     .auth-button-stack { display: grid; gap: 10px; }
-    .phone-auth-box { display: grid; gap: 10px; padding: 14px; border: 1px solid rgba(13,130,216,.14); border-radius: 20px; background: #f8fcff; }
-    .phone-auth-box p { margin: 0; color: #52657e; font-size: .88rem; line-height: 1.4; }
-    .phone-inline-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .phone-modern-card { display: grid; gap: 12px; padding: 16px; border: 1px solid rgba(13,130,216,.14); border-radius: 22px; background: #f8fcff; }
+    .phone-step-title { margin: 0; color: #03286a; font-size: 1.05rem; }
+    .phone-step-copy { margin: 0; color: #52657e; font-size: .92rem; line-height: 1.45; }
+    .phone-input-wrap { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 8px; border: 1px solid rgba(3,40,106,.16); border-radius: 16px; padding: 0 12px; background: #fff; }
+    .phone-input-wrap span { color: #17304f; font-weight: 900; white-space: nowrap; }
+    .phone-input-wrap input { width: 100%; border: 0; outline: 0; padding: 14px 0; font: inherit; background: transparent; }
+    .sms-code-input { width: 100%; box-sizing: border-box; border: 1px solid rgba(3,40,106,.16); border-radius: 18px; padding: 16px; background: #fff; font: inherit; font-size: 1.45rem; font-weight: 900; letter-spacing: .34em; text-align: center; }
+    .phone-link-row { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+    .phone-link-row button { border: 0; background: transparent; color: #0d82d8; font: inherit; font-weight: 900; cursor: pointer; padding: 4px 6px; }
+    .phone-muted-button { width: 100%; border: 1px solid rgba(3,40,106,.12); border-radius: 999px; padding: 13px 18px; background: #fff; color: #03286a; font: inherit; font-weight: 900; cursor: pointer; }
     #phoneRecaptcha { min-height: 1px; }
-    @media (max-width: 520px) { .phone-inline-actions { grid-template-columns: 1fr; } }
   </style>
   <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js" defer></script>
   <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js" defer></script>
   <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js" defer></script>
-  <script src="/BarrierCheck_APP/app/login.js?v=20260616barriercheck1" defer></script>
+  <script src="/BarrierCheck_APP/app/login.js?v=20260628safephone1" defer></script>
   <script src="/BarrierCheck_APP/app/firebase-config.js?v=20260628barriercheck32290" defer></script>
-  <script src="/BarrierCheck_APP/app/login-access-override.js?v=20260628phone1" defer></script>
+  <script src="/BarrierCheck_APP/app/login-access-override.js?v=20260628phone2" defer></script>
   <script defer>
     document.addEventListener("DOMContentLoaded", function () {
       function showTab(create) {
@@ -81,20 +87,36 @@
         <p class="login-panel-note">Use Google or a phone SMS code to access cloud-saved inspections.</p>
         <div class="auth-button-stack">
           <button id="googleSignInBtn" class="login-google-btn" type="button">Continue with Google</button>
-          <div class="phone-auth-box">
-            <label class="login-field">
-              <span>Phone number</span>
-              <input id="phoneSignInNumber" type="tel" inputmode="tel" autocomplete="tel" placeholder="+61412345678" />
-            </label>
-            <div class="phone-inline-actions">
-              <button id="phoneSignInSendBtn" class="login-secondary-btn" type="button">Send SMS code</button>
-              <button id="phoneSignInVerifyBtn" class="login-primary-btn" type="button">Verify code</button>
+
+          <div class="phone-modern-card">
+            <button id="phoneSignInStartBtn" class="phone-muted-button" type="button">Continue with phone</button>
+
+            <div id="phoneSignInRequestStep" hidden>
+              <h3 class="phone-step-title">Sign in with phone</h3>
+              <p class="phone-step-copy">Enter your mobile number and we’ll text you a one-time code.</p>
+              <label class="login-field">
+                <span>Mobile number</span>
+                <div class="phone-input-wrap">
+                  <span>🇦🇺 +61</span>
+                  <input id="phoneSignInNumber" type="tel" inputmode="tel" autocomplete="tel" placeholder="412 345 678" />
+                </div>
+              </label>
+              <button id="phoneSignInSendBtn" class="login-primary-btn" type="button">Send code</button>
+              <div class="phone-link-row">
+                <button id="phoneSignInBackBtn" type="button">Back</button>
+              </div>
             </div>
-            <label class="login-field">
-              <span>SMS code</span>
-              <input id="phoneSignInCode" type="text" inputmode="numeric" autocomplete="one-time-code" placeholder="123456" />
-            </label>
-            <p>Use international format, for example <strong>+61412345678</strong>.</p>
+
+            <div id="phoneSignInCodeStep" hidden>
+              <h3 class="phone-step-title">Enter your code</h3>
+              <p class="phone-step-copy">We sent a 6-digit code to <strong id="phoneSignInDisplay">your phone</strong>.</p>
+              <input id="phoneSignInCode" class="sms-code-input" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="000000" />
+              <button id="phoneSignInVerifyBtn" class="login-primary-btn" type="button">Verify and sign in</button>
+              <div class="phone-link-row">
+                <button id="phoneSignInResendBtn" type="button">Resend code</button>
+                <button id="phoneSignInChangeBtn" type="button">Change number</button>
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -115,7 +137,10 @@
 
           <label class="login-field">
             <span>Phone number</span>
-            <input id="signupPhone" type="tel" inputmode="tel" autocomplete="tel" placeholder="+61412345678" required />
+            <div class="phone-input-wrap">
+              <span>🇦🇺 +61</span>
+              <input id="signupPhone" type="tel" inputmode="tel" autocomplete="tel" placeholder="412 345 678" required />
+            </div>
           </label>
 
           <label class="login-field">
@@ -146,16 +171,20 @@
 
         <div class="auth-button-stack">
           <button id="googleCreateBtn" class="login-google-btn" type="button">Create with Google</button>
-          <div class="phone-auth-box">
-            <div class="phone-inline-actions">
-              <button id="phoneCreateSendBtn" class="login-secondary-btn" type="button">Send SMS code</button>
+
+          <div class="phone-modern-card">
+            <button id="phoneCreateStartBtn" class="phone-muted-button" type="button">Create with phone</button>
+
+            <div id="phoneCreateCodeStep" hidden>
+              <h3 class="phone-step-title">Verify your phone</h3>
+              <p class="phone-step-copy">We sent a 6-digit code to <strong id="phoneCreateDisplay">your phone</strong>.</p>
+              <input id="phoneCreateCode" class="sms-code-input" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="000000" />
               <button id="phoneCreateVerifyBtn" class="login-primary-btn" type="button">Verify and create account</button>
+              <div class="phone-link-row">
+                <button id="phoneCreateResendBtn" type="button">Resend code</button>
+                <button id="phoneCreateChangeBtn" type="button">Change number</button>
+              </div>
             </div>
-            <label class="login-field">
-              <span>SMS code</span>
-              <input id="phoneCreateCode" type="text" inputmode="numeric" autocomplete="one-time-code" placeholder="123456" />
-            </label>
-            <p>The SMS code will be sent to the phone number entered above.</p>
           </div>
         </div>
       </section>
