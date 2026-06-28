@@ -1,5 +1,10 @@
-// Login access patch for BarrierCheck free-trial signup flow.
+// Login access patch for BarrierCheck Google + phone free-trial signup flow.
 (function () {
+  var signInConfirmation = null;
+  var createConfirmation = null;
+  var recaptchaVerifier = null;
+  var recaptchaWidgetId = null;
+
   function clean(value) {
     return value === undefined || value === null ? "" : String(value).trim();
   }
@@ -25,6 +30,20 @@
     };
   }
 
+  function normalizeAuPhone(value) {
+    var phone = clean(value).replace(/[\s\-()]/g, "");
+    if (!phone) return "";
+    if (phone.indexOf("+") === 0) return phone;
+    if (phone.indexOf("04") === 0) return "+61" + phone.slice(1);
+    if (phone.indexOf("4") === 0 && phone.length === 9) return "+61" + phone;
+    return phone;
+  }
+
+  function phoneInputValue(id) {
+    var el = document.getElementById(id);
+    return normalizeAuPhone(el ? el.value : "");
+  }
+
   function isProfileComplete(profile) {
     return !!(profile && profile.inspectorName && profile.licenceNumber && profile.inspectorEmail && profile.inspectorPhone && profile.businessName && profile.profileIcon && profile.profileIcon.type);
   }
@@ -42,7 +61,7 @@
     var signup = getSignupData();
     var email = signup.email || (user && user.email) || "";
     var name = signup.fullName || (user && user.displayName) || "";
-    var phone = signup.phone || "";
+    var phone = normalizeAuPhone(signup.phone || (user && user.phoneNumber) || "");
     return {
       inspectorName: name,
       licenceNumber: signup.licenceNumber || "",
@@ -78,20 +97,27 @@
     return profileData;
   }
 
-  function makeProvider(kind) {
-    if (kind === "apple") {
-      var appleProvider = new firebase.auth.OAuthProvider("apple.com");
-      appleProvider.addScope("email");
-      appleProvider.addScope("name");
-      return appleProvider;
-    }
-    var googleProvider = new firebase.auth.GoogleAuthProvider();
-    googleProvider.setCustomParameters({ prompt: "select_account" });
-    return googleProvider;
+  function makeGoogleProvider() {
+    var provider = new firebase.auth.GoogleAuthProvider();
+    provider.setCustomParameters({ prompt: "select_account" });
+    return provider;
   }
 
-  function providerLabel(kind) {
-    return kind === "apple" ? "Apple" : "Google";
+  function ensureRecaptcha() {
+    if (recaptchaVerifier) return Promise.resolve(recaptchaVerifier);
+    var container = document.getElementById("phoneRecaptcha");
+    if (!container) return Promise.reject(new Error("Phone verification container is missing."));
+    recaptchaVerifier = new firebase.auth.RecaptchaVerifier("phoneRecaptcha", { size: "invisible" });
+    return recaptchaVerifier.render().then(function (widgetId) {
+      recaptchaWidgetId = widgetId;
+      return recaptchaVerifier;
+    });
+  }
+
+  function resetRecaptcha() {
+    if (window.grecaptcha && recaptchaWidgetId !== null) {
+      try { window.grecaptcha.reset(recaptchaWidgetId); } catch (error) {}
+    }
   }
 
   window.createPendingProfile = function (user) {
@@ -100,6 +126,7 @@
     var profileData = setTrialAccess({
       email: user.email || inspectorProfile.inspectorEmail || "",
       displayName: inspectorProfile.inspectorName || user.displayName || "",
+      phoneNumber: user.phoneNumber || inspectorProfile.inspectorPhone || "",
       approved: false,
       admin: false,
       role: "pending",
@@ -122,24 +149,24 @@
     return getUserProfileRef(user).set(profileData, { merge: true });
   };
 
-  function signInWithProvider(kind) {
+  window.signInWithGoogleOnly = function () {
     if (!loginAuth || !window.firebase) return;
     setPendingVisible(false);
-    setLoginStatus("Opening " + providerLabel(kind) + " sign-in...", false);
-    loginAuth.signInWithPopup(makeProvider(kind)).catch(function (error) {
+    setLoginStatus("Opening Google sign-in...", false);
+    loginAuth.signInWithPopup(makeGoogleProvider()).catch(function (error) {
       console.error(error);
-      setLoginStatus(providerLabel(kind) + " sign-in failed: " + error.message, true);
+      setLoginStatus("Google sign-in failed: " + error.message, true);
     });
-  }
+  };
 
-  function createWithProvider(kind) {
+  window.createAccountWithGoogle = function () {
     if (!loginAuth || !window.firebase) return;
     var signup = getSignupData();
     if (!hasRequiredSignupFields(signup)) return;
     setPendingVisible(false);
-    setLoginStatus("Opening " + providerLabel(kind) + " sign-up...", false);
+    setLoginStatus("Opening Google sign-up...", false);
     loginAuth
-      .signInWithPopup(makeProvider(kind))
+      .signInWithPopup(makeGoogleProvider())
       .then(function (result) {
         return window.createPendingProfile(result.user);
       })
@@ -149,14 +176,99 @@
       })
       .catch(function (error) {
         console.error(error);
-        setLoginStatus(providerLabel(kind) + " sign-up failed: " + error.message, true);
+        setLoginStatus("Google sign-up failed: " + error.message, true);
       });
-  }
+  };
 
-  window.signInWithGoogleOnly = function () { signInWithProvider("google"); };
-  window.signInWithAppleOnly = function () { signInWithProvider("apple"); };
-  window.createAccountWithGoogle = function () { createWithProvider("google"); };
-  window.createAccountWithApple = function () { createWithProvider("apple"); };
+  window.sendPhoneSignInCode = function () {
+    if (!loginAuth || !window.firebase) return;
+    var phone = phoneInputValue("phoneSignInNumber");
+    if (!phone) {
+      setLoginStatus("Enter your phone number first.", true);
+      return;
+    }
+    setPendingVisible(false);
+    setLoginStatus("Sending SMS code...", false);
+    ensureRecaptcha()
+      .then(function (verifier) { return loginAuth.signInWithPhoneNumber(phone, verifier); })
+      .then(function (confirmation) {
+        signInConfirmation = confirmation;
+        setLoginStatus("SMS code sent. Enter the code and press Verify code.", false);
+      })
+      .catch(function (error) {
+        console.error(error);
+        resetRecaptcha();
+        setLoginStatus("Could not send SMS code: " + error.message, true);
+      });
+  };
+
+  window.verifyPhoneSignInCode = function () {
+    var codeEl = document.getElementById("phoneSignInCode");
+    var code = clean(codeEl ? codeEl.value : "");
+    if (!signInConfirmation) {
+      setLoginStatus("Send an SMS code first.", true);
+      return;
+    }
+    if (!code) {
+      setLoginStatus("Enter the SMS code.", true);
+      return;
+    }
+    setLoginStatus("Verifying phone code...", false);
+    signInConfirmation.confirm(code).catch(function (error) {
+      console.error(error);
+      setLoginStatus("Phone sign-in failed: " + error.message, true);
+    });
+  };
+
+  window.sendPhoneCreateCode = function () {
+    if (!loginAuth || !window.firebase) return;
+    var signup = getSignupData();
+    if (!hasRequiredSignupFields(signup)) return;
+    var phone = normalizeAuPhone(signup.phone);
+    if (!phone) {
+      setLoginStatus("Enter your phone number first.", true);
+      return;
+    }
+    setPendingVisible(false);
+    setLoginStatus("Sending SMS code...", false);
+    ensureRecaptcha()
+      .then(function (verifier) { return loginAuth.signInWithPhoneNumber(phone, verifier); })
+      .then(function (confirmation) {
+        createConfirmation = confirmation;
+        setLoginStatus("SMS code sent. Enter the code and press Verify and create account.", false);
+      })
+      .catch(function (error) {
+        console.error(error);
+        resetRecaptcha();
+        setLoginStatus("Could not send SMS code: " + error.message, true);
+      });
+  };
+
+  window.verifyPhoneCreateCode = function () {
+    var codeEl = document.getElementById("phoneCreateCode");
+    var code = clean(codeEl ? codeEl.value : "");
+    if (!createConfirmation) {
+      setLoginStatus("Send an SMS code first.", true);
+      return;
+    }
+    if (!code) {
+      setLoginStatus("Enter the SMS code.", true);
+      return;
+    }
+    setLoginStatus("Verifying phone code and creating account...", false);
+    createConfirmation.confirm(code)
+      .then(function (result) {
+        return window.createPendingProfile(result.user);
+      })
+      .then(function () {
+        setLoginStatus("Account created. Opening your free trial...", false);
+        window.goToApp();
+      })
+      .catch(function (error) {
+        console.error(error);
+        setLoginStatus("Phone account creation failed: " + error.message, true);
+      });
+  };
 
   window.goToApp = function () {
     window.location.replace("/app/");
@@ -201,8 +313,10 @@
 
   document.addEventListener("DOMContentLoaded", function () {
     bindButton("googleSignInBtn", window.signInWithGoogleOnly);
-    bindButton("appleSignInBtn", window.signInWithAppleOnly);
     bindButton("googleCreateBtn", window.createAccountWithGoogle);
-    bindButton("appleCreateBtn", window.createAccountWithApple);
+    bindButton("phoneSignInSendBtn", window.sendPhoneSignInCode);
+    bindButton("phoneSignInVerifyBtn", window.verifyPhoneSignInCode);
+    bindButton("phoneCreateSendBtn", window.sendPhoneCreateCode);
+    bindButton("phoneCreateVerifyBtn", window.verifyPhoneCreateCode);
   });
 })();
