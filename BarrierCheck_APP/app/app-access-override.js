@@ -1,14 +1,32 @@
 // BarrierCheck app access patch.
 (function () {
+  function clean(value) {
+    return value === undefined || value === null ? "" : String(value).trim();
+  }
+
   function canEnter(profile) {
     if (!profile) return false;
+    var role = clean(profile.role).toLowerCase();
+    var billing = clean(profile.billingAccess || profile.subscriptionStatus).toLowerCase();
+    var verification = clean(profile.verificationStatus).toLowerCase();
+    var subscription = clean(profile.subscriptionStatus).toLowerCase();
+
+    if (["rejected", "suspended", "blocked"].indexOf(role) >= 0) return false;
+    if (["rejected", "suspended", "blocked"].indexOf(billing) >= 0) return false;
+    if (["rejected", "suspended", "blocked"].indexOf(verification) >= 0) return false;
+    if (["rejected", "suspended", "blocked"].indexOf(subscription) >= 0) return false;
+
     return profile.approved === true
-      || profile.role === "admin"
+      || role === "admin"
       || profile.admin === true
       || profile.isAdmin === true
-      || profile.verificationStatus === "approved"
-      || profile.subscriptionStatus === "active"
-      || profile.billingAccess === "active";
+      || verification === "approved"
+      || billing === "active"
+      || subscription === "active"
+      || billing === "free_inspections"
+      || subscription === "free_inspections"
+      || verification === "pending"
+      || verification === "needs_more_info";
   }
 
   function defaultProfileIcon() {
@@ -41,22 +59,36 @@
     return !!(p && p.inspectorName && p.licenceNumber && p.inspectorEmail && p.inspectorPhone && p.businessName && p.profileIcon && p.profileIcon.type);
   }
 
+  function trialFields(profile) {
+    var billing = clean(profile && profile.billingAccess).toLowerCase();
+    var subscription = clean(profile && profile.subscriptionStatus).toLowerCase();
+    var blocked = ["rejected", "suspended", "blocked"].indexOf(billing) >= 0 || ["rejected", "suspended", "blocked"].indexOf(subscription) >= 0;
+    if (blocked) return {};
+    return {
+      billingAccess: billing && billing !== "pending_verification" ? profile.billingAccess : "free_inspections",
+      subscriptionStatus: subscription && subscription !== "pending_verification" ? profile.subscriptionStatus : "free_inspections",
+      freeInspectionLimit: Number(profile && profile.freeInspectionLimit || 3),
+      freeInspectionsUsed: Number(profile && profile.freeInspectionsUsed || 0)
+    };
+  }
+
   function repairProfileIfNeeded(profile, user) {
     var shaped = profileShape(profile && profile.inspectorProfile, user);
     var complete = profileIsComplete(shaped);
-    var fixed = Object.assign({}, profile || {}, {
+    var accessDefaults = trialFields(profile || {});
+    var fixed = Object.assign({}, profile || {}, accessDefaults, {
       inspectorProfile: shaped,
       profileCompleted: complete
     });
 
     if (firebaseDb && user) {
-      firebaseDb.collection("users").doc(user.uid).set({
+      firebaseDb.collection("users").doc(user.uid).set(Object.assign({
         email: user.email || fixed.email || "",
         displayName: user.displayName || fixed.displayName || "",
         inspectorProfile: shaped,
         profileCompleted: complete,
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-      }, { merge: true }).catch(function (error) {
+      }, accessDefaults), { merge: true }).catch(function (error) {
         console.warn("Could not repair profile shape", error);
       });
     }
