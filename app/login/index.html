@@ -15,14 +15,18 @@
     .trial-note-box { margin: 14px 0; padding: 13px 14px; border-radius: 18px; background: #f2f9ff; color: #17304f; font-size: .92rem; line-height: 1.45; }
     .trial-note-box strong { display: block; color: #03286a; margin-bottom: 4px; }
     .auth-button-stack { display: grid; gap: 10px; }
-    .login-apple-btn { width: 100%; border: 0; border-radius: 999px; padding: 13px 18px; background: #111; color: #fff; font: inherit; font-weight: 900; cursor: pointer; box-shadow: 0 10px 20px rgba(0,0,0,.12); }
+    .phone-auth-box { display: grid; gap: 10px; padding: 14px; border: 1px solid rgba(13,130,216,.14); border-radius: 20px; background: #f8fcff; }
+    .phone-auth-box p { margin: 0; color: #52657e; font-size: .88rem; line-height: 1.4; }
+    .phone-inline-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    #phoneRecaptcha { min-height: 1px; }
+    @media (max-width: 520px) { .phone-inline-actions { grid-template-columns: 1fr; } }
   </style>
   <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js" defer></script>
   <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js" defer></script>
   <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js" defer></script>
   <script src="/BarrierCheck_APP/app/login.js?v=20260616barriercheck1" defer></script>
   <script src="/BarrierCheck_APP/app/firebase-config.js?v=20260628barriercheck32290" defer></script>
-  <script src="/BarrierCheck_APP/app/login-access-override.js?v=20260628apple1" defer></script>
+  <script src="/BarrierCheck_APP/app/login-access-override.js?v=20260628phone1" defer></script>
   <script defer>
     document.addEventListener("DOMContentLoaded", function () {
       function showTab(create) {
@@ -46,7 +50,7 @@
       if (signInTab) signInTab.addEventListener("click", function () { showTab(false); });
       if (createTab) createTab.addEventListener("click", function () { showTab(true); });
       var signupForm = document.getElementById("signupForm");
-      if (signupForm) signupForm.addEventListener("submit", function (event) { event.preventDefault(); var btn = document.getElementById("createAccountBtn"); if (btn) btn.click(); });
+      if (signupForm) signupForm.addEventListener("submit", function (event) { event.preventDefault(); });
       var params = new URLSearchParams(window.location.search || "");
       showTab(params.has("signup") || params.has("trial"));
     });
@@ -65,7 +69,7 @@
 
       <div class="login-intro">
         <h2>Welcome to BarrierCheck</h2>
-        <p>Sign in or create an inspector account with Google or Apple.</p>
+        <p>Sign in or create an inspector account with Google or phone.</p>
       </div>
 
       <div class="login-mode-tabs" role="tablist" aria-label="Choose sign in or create account">
@@ -74,15 +78,29 @@
       </div>
 
       <section id="signInPanel" role="tabpanel" aria-labelledby="signInTabBtn">
-        <p class="login-panel-note">Use your Google or Apple account to access cloud-saved inspections.</p>
+        <p class="login-panel-note">Use Google or a phone SMS code to access cloud-saved inspections.</p>
         <div class="auth-button-stack">
           <button id="googleSignInBtn" class="login-google-btn" type="button">Continue with Google</button>
-          <button id="appleSignInBtn" class="login-apple-btn" type="button">Continue with Apple</button>
+          <div class="phone-auth-box">
+            <label class="login-field">
+              <span>Phone number</span>
+              <input id="phoneSignInNumber" type="tel" inputmode="tel" autocomplete="tel" placeholder="+61412345678" />
+            </label>
+            <div class="phone-inline-actions">
+              <button id="phoneSignInSendBtn" class="login-secondary-btn" type="button">Send SMS code</button>
+              <button id="phoneSignInVerifyBtn" class="login-primary-btn" type="button">Verify code</button>
+            </div>
+            <label class="login-field">
+              <span>SMS code</span>
+              <input id="phoneSignInCode" type="text" inputmode="numeric" autocomplete="one-time-code" placeholder="123456" />
+            </label>
+            <p>Use international format, for example <strong>+61412345678</strong>.</p>
+          </div>
         </div>
       </section>
 
       <section id="createPanel" role="tabpanel" aria-labelledby="createTabBtn" hidden>
-        <p class="login-panel-note">Enter your inspector details, then create your account with Google or Apple.</p>
+        <p class="login-panel-note">Enter your inspector details, then create your account with Google or phone.</p>
 
         <form id="signupForm" class="login-form signup-grid">
           <label class="login-field">
@@ -91,13 +109,13 @@
           </label>
 
           <label class="login-field">
-            <span>Email</span>
+            <span>Email address for reports and support</span>
             <input id="signupEmail" type="email" autocomplete="email" required />
           </label>
 
           <label class="login-field">
-            <span>Phone</span>
-            <input id="signupPhone" type="tel" autocomplete="tel" required />
+            <span>Phone number</span>
+            <input id="signupPhone" type="tel" inputmode="tel" autocomplete="tel" placeholder="+61412345678" required />
           </label>
 
           <label class="login-field">
@@ -128,7 +146,17 @@
 
         <div class="auth-button-stack">
           <button id="googleCreateBtn" class="login-google-btn" type="button">Create with Google</button>
-          <button id="appleCreateBtn" class="login-apple-btn" type="button">Create with Apple</button>
+          <div class="phone-auth-box">
+            <div class="phone-inline-actions">
+              <button id="phoneCreateSendBtn" class="login-secondary-btn" type="button">Send SMS code</button>
+              <button id="phoneCreateVerifyBtn" class="login-primary-btn" type="button">Verify and create account</button>
+            </div>
+            <label class="login-field">
+              <span>SMS code</span>
+              <input id="phoneCreateCode" type="text" inputmode="numeric" autocomplete="one-time-code" placeholder="123456" />
+            </label>
+            <p>The SMS code will be sent to the phone number entered above.</p>
+          </div>
         </div>
       </section>
 
@@ -137,6 +165,8 @@
         <p>This account is not currently active. Please contact BarrierCheck support.</p>
         <button id="pendingSignOutBtn" class="login-google-btn" type="button">Sign out</button>
       </div>
+
+      <div id="phoneRecaptcha"></div>
 
       <p id="loginStatus" class="login-status">Checking Firebase...</p>
 
