@@ -21,6 +21,34 @@
   <script src="/BarrierCheck_APP/app/login.js?v=20260616barriercheck1" defer></script>
   <script src="/BarrierCheck_APP/app/firebase-config.js?v=20260628barriercheck32290" defer></script>
   <script src="/BarrierCheck_APP/app/login-access-override.js?v=20260628trialflow1" defer></script>
+  <script defer>
+    document.addEventListener("DOMContentLoaded", function () {
+      function showTab(create) {
+        var signInPanel = document.getElementById("signInPanel");
+        var createPanel = document.getElementById("createPanel");
+        var signInTab = document.getElementById("signInTabBtn");
+        var createTab = document.getElementById("createTabBtn");
+        if (signInPanel) signInPanel.hidden = create;
+        if (createPanel) createPanel.hidden = !create;
+        if (signInTab) {
+          signInTab.classList.toggle("active", !create);
+          signInTab.setAttribute("aria-selected", create ? "false" : "true");
+        }
+        if (createTab) {
+          createTab.classList.toggle("active", create);
+          createTab.setAttribute("aria-selected", create ? "true" : "false");
+        }
+      }
+      var signInTab = document.getElementById("signInTabBtn");
+      var createTab = document.getElementById("createTabBtn");
+      if (signInTab) signInTab.addEventListener("click", function () { showTab(false); });
+      if (createTab) createTab.addEventListener("click", function () { showTab(true); });
+      var signupForm = document.getElementById("signupForm");
+      if (signupForm) signupForm.addEventListener("submit", function (event) { event.preventDefault(); var btn = document.getElementById("createAccountBtn"); if (btn) btn.click(); });
+      var params = new URLSearchParams(window.location.search || "");
+      showTab(params.has("signup") || params.has("trial"));
+    });
+  </script>
 </head>
 <body class="login-page-body">
   <main class="login-shell" aria-label="BarrierCheck sign in">
