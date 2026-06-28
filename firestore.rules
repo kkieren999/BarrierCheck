@@ -63,7 +63,8 @@ service cloud.firestore {
           "rejectionReason",
           "suspendedAt",
           "suspendedBy",
-          "suspensionReason"
+          "suspensionReason",
+          "emailLog"
         ]);
     }
 
@@ -77,6 +78,12 @@ service cloud.firestore {
       match /inspections/{inspectionId} {
         allow read, create, update, delete: if isOwner(userId) || isAdmin();
       }
+    }
+
+    // Firebase Trigger Email extension watches this collection.
+    // Only admins can queue or view email documents from the client app.
+    match /email/{emailId} {
+      allow create, read, update, delete: if isAdmin();
     }
 
     match /{document=**} {
