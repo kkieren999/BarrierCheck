@@ -78,6 +78,12 @@
         <p>Sign in or create an inspector account with Google or phone.</p>
       </div>
 
+      <form id="emailLoginForm" hidden aria-hidden="true">
+        <input id="loginEmail" type="email" tabindex="-1" />
+        <input id="loginPassword" type="password" tabindex="-1" />
+      </form>
+      <button id="createAccountBtn" type="button" hidden aria-hidden="true" tabindex="-1"></button>
+
       <div class="login-mode-tabs" role="tablist" aria-label="Choose sign in or create account">
         <button id="signInTabBtn" class="active" type="button" role="tab" aria-selected="true" aria-controls="signInPanel">Sign in</button>
         <button id="createTabBtn" type="button" role="tab" aria-selected="false" aria-controls="createPanel">Create account</button>
