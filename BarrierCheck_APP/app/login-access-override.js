@@ -19,7 +19,6 @@
     return {
       fullName: val("signupName"),
       email: val("signupEmail") || val("loginEmail"),
-      password: document.getElementById("signupPassword") ? document.getElementById("signupPassword").value : "",
       phone: val("signupPhone"),
       licenceNumber: val("signupLicence"),
       businessName: val("signupBusiness")
@@ -30,13 +29,9 @@
     return !!(profile && profile.inspectorName && profile.licenceNumber && profile.inspectorEmail && profile.inspectorPhone && profile.businessName && profile.profileIcon && profile.profileIcon.type);
   }
 
-  function hasRequiredSignupFields(data, needsPassword) {
+  function hasRequiredSignupFields(data) {
     if (!data.fullName || !data.email || !data.phone || !data.licenceNumber || !data.businessName) {
       setLoginStatus("Enter your name, email, phone, licence number and business name before creating an account.", true);
-      return false;
-    }
-    if (needsPassword && (!data.password || data.password.length < 6)) {
-      setLoginStatus("Password must be at least 6 characters.", true);
       return false;
     }
     if (typeof requireLegalTermsForNewAccount === "function" && !requireLegalTermsForNewAccount()) return false;
@@ -83,6 +78,22 @@
     return profileData;
   }
 
+  function makeProvider(kind) {
+    if (kind === "apple") {
+      var appleProvider = new firebase.auth.OAuthProvider("apple.com");
+      appleProvider.addScope("email");
+      appleProvider.addScope("name");
+      return appleProvider;
+    }
+    var googleProvider = new firebase.auth.GoogleAuthProvider();
+    googleProvider.setCustomParameters({ prompt: "select_account" });
+    return googleProvider;
+  }
+
+  function providerLabel(kind) {
+    return kind === "apple" ? "Apple" : "Google";
+  }
+
   window.createPendingProfile = function (user) {
     var providerIds = (user.providerData || []).map(function (provider) { return provider.providerId; });
     var inspectorProfile = window.buildInitialInspectorProfile(user);
@@ -111,57 +122,24 @@
     return getUserProfileRef(user).set(profileData, { merge: true });
   };
 
-  window.createAccountWithEmail = function () {
-    if (!loginAuth) return;
-    var signup = getSignupData();
-    if (!hasRequiredSignupFields(signup, true)) return;
-
-    setPendingVisible(false);
-    setLoginStatus("Creating your inspector account...", false);
-
-    loginAuth
-      .createUserWithEmailAndPassword(signup.email, signup.password)
-      .then(function (credential) {
-        if (credential.user && signup.fullName) {
-          return credential.user.updateProfile({ displayName: signup.fullName }).catch(function () {}).then(function () { return credential.user; });
-        }
-        return credential.user;
-      })
-      .then(function (user) {
-        return window.createPendingProfile(user);
-      })
-      .then(function () {
-        setLoginStatus("Account created. Opening your free trial...", false);
-        window.goToApp();
-      })
-      .catch(function (error) {
-        console.error(error);
-        setLoginStatus("Could not create account: " + error.message, true);
-      });
-  };
-
-  window.signInWithGoogleOnly = function () {
+  function signInWithProvider(kind) {
     if (!loginAuth || !window.firebase) return;
-    var provider = new firebase.auth.GoogleAuthProvider();
-    provider.setCustomParameters({ prompt: "select_account" });
     setPendingVisible(false);
-    setLoginStatus("Opening Google sign-in...", false);
-    loginAuth.signInWithPopup(provider).catch(function (error) {
+    setLoginStatus("Opening " + providerLabel(kind) + " sign-in...", false);
+    loginAuth.signInWithPopup(makeProvider(kind)).catch(function (error) {
       console.error(error);
-      setLoginStatus("Google sign-in failed: " + error.message, true);
+      setLoginStatus(providerLabel(kind) + " sign-in failed: " + error.message, true);
     });
-  };
+  }
 
-  window.createAccountWithGoogle = function () {
+  function createWithProvider(kind) {
     if (!loginAuth || !window.firebase) return;
     var signup = getSignupData();
-    if (!hasRequiredSignupFields(signup, false)) return;
-    var provider = new firebase.auth.GoogleAuthProvider();
-    provider.setCustomParameters({ prompt: "select_account" });
+    if (!hasRequiredSignupFields(signup)) return;
     setPendingVisible(false);
-    setLoginStatus("Opening Google sign-up...", false);
+    setLoginStatus("Opening " + providerLabel(kind) + " sign-up...", false);
     loginAuth
-      .signInWithPopup(provider)
+      .signInWithPopup(makeProvider(kind))
       .then(function (result) {
         return window.createPendingProfile(result.user);
       })
@@ -171,9 +149,14 @@
       })
       .catch(function (error) {
         console.error(error);
-        setLoginStatus("Google sign-up failed: " + error.message, true);
+        setLoginStatus(providerLabel(kind) + " sign-up failed: " + error.message, true);
       });
-  };
+  }
+
+  window.signInWithGoogleOnly = function () { signInWithProvider("google"); };
+  window.signInWithAppleOnly = function () { signInWithProvider("apple"); };
+  window.createAccountWithGoogle = function () { createWithProvider("google"); };
+  window.createAccountWithApple = function () { createWithProvider("apple"); };
 
   window.goToApp = function () {
     window.location.replace("/app/");
@@ -206,32 +189,20 @@
       });
   };
 
+  function bindButton(id, handler) {
+    var button = document.getElementById(id);
+    if (!button) return;
+    button.addEventListener("click", function (event) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      handler();
+    }, true);
+  }
+
   document.addEventListener("DOMContentLoaded", function () {
-    var createBtn = document.getElementById("createAccountBtn");
-    if (createBtn) {
-      createBtn.addEventListener("click", function (event) {
-        event.preventDefault();
-        event.stopImmediatePropagation();
-        window.createAccountWithEmail();
-      }, true);
-    }
-
-    var googleSignInBtn = document.getElementById("googleSignInBtn");
-    if (googleSignInBtn) {
-      googleSignInBtn.addEventListener("click", function (event) {
-        event.preventDefault();
-        event.stopImmediatePropagation();
-        window.signInWithGoogleOnly();
-      }, true);
-    }
-
-    var googleCreateBtn = document.getElementById("googleCreateBtn");
-    if (googleCreateBtn) {
-      googleCreateBtn.addEventListener("click", function (event) {
-        event.preventDefault();
-        event.stopImmediatePropagation();
-        window.createAccountWithGoogle();
-      }, true);
-    }
+    bindButton("googleSignInBtn", window.signInWithGoogleOnly);
+    bindButton("appleSignInBtn", window.signInWithAppleOnly);
+    bindButton("googleCreateBtn", window.createAccountWithGoogle);
+    bindButton("appleCreateBtn", window.createAccountWithApple);
   });
 })();
