@@ -6,19 +6,21 @@
   <title>Sign in | BarrierCheck Pool Inspection Software</title>
   <link rel="canonical" href="https://barriercheck.com.au/app/login/" />
   <link rel="stylesheet" href="/BarrierCheck_APP/app/styles.css?v=20260616barriercheck1" />
+  <style>
+    .login-mode-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 18px 0; padding: 6px; border-radius: 999px; background: #edf7ff; }
+    .login-mode-tabs button { border: 0; border-radius: 999px; padding: 11px 12px; background: transparent; color: #52657e; font: inherit; font-weight: 900; cursor: pointer; }
+    .login-mode-tabs button.active { color: #fff; background: linear-gradient(135deg, #03286a, #0d82d8); box-shadow: 0 10px 24px rgba(3,40,106,.18); }
+    .login-panel-note { margin: 0 0 16px; color: #52657e; line-height: 1.45; }
+    .signup-grid { display: grid; gap: 12px; }
+    .trial-note-box { margin: 14px 0; padding: 13px 14px; border-radius: 18px; background: #f2f9ff; color: #17304f; font-size: .92rem; line-height: 1.45; }
+    .trial-note-box strong { display: block; color: #03286a; margin-bottom: 4px; }
+  </style>
   <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js" defer></script>
   <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js" defer></script>
   <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js" defer></script>
   <script src="/BarrierCheck_APP/app/login.js?v=20260616barriercheck1" defer></script>
   <script src="/BarrierCheck_APP/app/firebase-config.js?v=20260628barriercheck32290" defer></script>
-  <script src="/BarrierCheck_APP/app/login-access-override.js?v=20260628adminaccess" defer></script>
-  <script defer>
-    window.addEventListener("DOMContentLoaded", function () {
-      window.goToApp = function () {
-        window.location.replace("/app/");
-      };
-    });
-  </script>
+  <script src="/BarrierCheck_APP/app/login-access-override.js?v=20260628trialflow1" defer></script>
 </head>
 <body class="login-page-body">
   <main class="login-shell" aria-label="BarrierCheck sign in">
@@ -32,51 +34,102 @@
       </div>
 
       <div class="login-intro">
-        <h2>Sign in</h2>
-        <p>Use your approved BarrierCheck account to access cloud-saved inspections.</p>
+        <h2>Welcome to BarrierCheck</h2>
+        <p>Sign in or create an inspector account to start your free trial.</p>
       </div>
 
-      <form id="emailLoginForm" class="login-form">
-        <label class="login-field">
-          <span>Email</span>
-          <input id="loginEmail" type="email" autocomplete="email" required />
-        </label>
+      <div class="login-mode-tabs" role="tablist" aria-label="Choose sign in or create account">
+        <button id="signInTabBtn" class="active" type="button" role="tab" aria-selected="true" aria-controls="signInPanel">Sign in</button>
+        <button id="createTabBtn" type="button" role="tab" aria-selected="false" aria-controls="createPanel">Create account</button>
+      </div>
 
-        <label class="login-field">
-          <span>Password</span>
-          <input id="loginPassword" type="password" autocomplete="current-password" required />
-        </label>
+      <section id="signInPanel" role="tabpanel" aria-labelledby="signInTabBtn">
+        <p class="login-panel-note">Use your BarrierCheck account to access cloud-saved inspections.</p>
+        <form id="emailLoginForm" class="login-form">
+          <label class="login-field">
+            <span>Email</span>
+            <input id="loginEmail" type="email" autocomplete="email" required />
+          </label>
 
-        <label class="legal-check-row">
-          <input id="legalAcceptCheck" type="checkbox" />
-          <span>I agree to the <a href="/terms/" target="_blank" rel="noopener">Terms of Service</a>, <a href="/privacy/" target="_blank" rel="noopener">Privacy Policy</a>, and <a href="/refunds/" target="_blank" rel="noopener">Refund Policy</a>.</span>
-        </label>
+          <label class="login-field">
+            <span>Password</span>
+            <input id="loginPassword" type="password" autocomplete="current-password" required />
+          </label>
 
-        <label class="legal-check-row optional">
-          <input id="marketingOptInCheck" type="checkbox" />
-          <span>Send me BarrierCheck product updates and marketing emails. I can unsubscribe later.</span>
-        </label>
+          <button class="login-primary-btn" type="submit">Sign in</button>
+        </form>
 
-        <button class="login-primary-btn" type="submit">Sign in</button>
-        <button id="createAccountBtn" class="login-secondary-btn" type="button">Create account</button>
-      </form>
+        <div class="login-divider"><span>or</span></div>
 
-      <div class="login-divider"><span>or</span></div>
+        <button id="googleSignInBtn" class="login-google-btn" type="button">Sign in with Google</button>
+      </section>
 
-      <button id="googleSignInBtn" class="login-google-btn" type="button">
-        Sign in with Google
-      </button>
+      <section id="createPanel" role="tabpanel" aria-labelledby="createTabBtn" hidden>
+        <p class="login-panel-note">Create your inspector account, complete your profile, and start with 3 free inspections while verification is pending.</p>
+
+        <form id="signupForm" class="login-form signup-grid">
+          <label class="login-field">
+            <span>Full name</span>
+            <input id="signupName" type="text" autocomplete="name" required />
+          </label>
+
+          <label class="login-field">
+            <span>Email</span>
+            <input id="signupEmail" type="email" autocomplete="email" required />
+          </label>
+
+          <label class="login-field">
+            <span>Password</span>
+            <input id="signupPassword" type="password" autocomplete="new-password" required />
+          </label>
+
+          <label class="login-field">
+            <span>Phone</span>
+            <input id="signupPhone" type="tel" autocomplete="tel" required />
+          </label>
+
+          <label class="login-field">
+            <span>QBCC / pool safety inspector licence number</span>
+            <input id="signupLicence" type="text" autocomplete="off" required />
+          </label>
+
+          <label class="login-field">
+            <span>Business name</span>
+            <input id="signupBusiness" type="text" autocomplete="organization" required />
+          </label>
+
+          <div class="trial-note-box">
+            <strong>How access works</strong>
+            You can enter the app straight away. Complete your inspector profile before starting real inspections. Your first 3 inspections are free while we verify your inspector details.
+          </div>
+
+          <label class="legal-check-row">
+            <input id="legalAcceptCheck" type="checkbox" />
+            <span>I agree to the <a href="/terms/" target="_blank" rel="noopener">Terms of Service</a>, <a href="/privacy/" target="_blank" rel="noopener">Privacy Policy</a>, and <a href="/refunds/" target="_blank" rel="noopener">Refund Policy</a>.</span>
+          </label>
+
+          <label class="legal-check-row optional">
+            <input id="marketingOptInCheck" type="checkbox" />
+            <span>Send me BarrierCheck product updates and marketing emails. I can unsubscribe later.</span>
+          </label>
+
+          <button id="createAccountBtn" class="login-primary-btn" type="submit">Create inspector account</button>
+        </form>
+
+        <div class="login-divider"><span>or</span></div>
+        <button id="googleCreateBtn" class="login-google-btn" type="button">Create with Google</button>
+      </section>
 
       <div id="pendingBox" class="login-pending-box" hidden>
-        <strong>Account pending approval</strong>
-        <p>Your account has been created and is pending inspector verification. We aim to review new accounts within 24 hours.</p>
+        <strong>Account unavailable</strong>
+        <p>This account is not currently active. Please contact BarrierCheck support.</p>
         <button id="pendingSignOutBtn" class="login-google-btn" type="button">Sign out</button>
       </div>
 
       <p id="loginStatus" class="login-status">Checking Firebase...</p>
 
       <p class="login-note">
-        New accounts are for pool safety inspectors only. We verify inspector details before approving access.
+        New accounts are for pool safety inspectors. We verify inspector details before official/ongoing use.
       </p>
 
       <nav class="legal-link-row" aria-label="Legal and support links">
