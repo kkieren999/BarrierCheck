@@ -11,6 +11,59 @@
       || profile.billingAccess === "active";
   }
 
+  function defaultProfileIcon() {
+    return { type: "default", photoURL: "", avatarId: "default" };
+  }
+
+  function profileShape(profile, user) {
+    var p = profile || {};
+    var email = p.inspectorEmail || p.reportEmail || (user && user.email) || "";
+    var phone = p.inspectorPhone || p.reportPhone || "";
+    return {
+      inspectorName: p.inspectorName || (user && user.displayName) || "",
+      licenceNumber: p.licenceNumber || "",
+      inspectorEmail: email,
+      inspectorPhone: phone,
+      businessName: p.businessName || "",
+      businessAddress: p.businessAddress || "",
+      businessAbn: p.businessAbn || "",
+      businessWebsite: p.businessWebsite || "",
+      reportEmail: p.reportEmail || email,
+      reportPhone: p.reportPhone || phone,
+      reportLogoUrl: p.reportLogoUrl || "",
+      reportFooterText: p.reportFooterText || "",
+      inspectionNumberPrefix: p.inspectionNumberPrefix || "BC",
+      profileIcon: p.profileIcon || defaultProfileIcon()
+    };
+  }
+
+  function profileIsComplete(p) {
+    return !!(p && p.inspectorName && p.licenceNumber && p.inspectorEmail && p.inspectorPhone && p.businessName && p.profileIcon && p.profileIcon.type);
+  }
+
+  function repairProfileIfNeeded(profile, user) {
+    var shaped = profileShape(profile && profile.inspectorProfile, user);
+    var complete = profileIsComplete(shaped);
+    var fixed = Object.assign({}, profile || {}, {
+      inspectorProfile: shaped,
+      profileCompleted: complete
+    });
+
+    if (firebaseDb && user) {
+      firebaseDb.collection("users").doc(user.uid).set({
+        email: user.email || fixed.email || "",
+        displayName: user.displayName || fixed.displayName || "",
+        inspectorProfile: shaped,
+        profileCompleted: complete,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      }, { merge: true }).catch(function (error) {
+        console.warn("Could not repair profile shape", error);
+      });
+    }
+
+    return fixed;
+  }
+
   window.initFirebase = function () {
     ensureAuthUI();
     if (!window.firebase || !window.firebase.initializeApp) {
@@ -57,10 +110,11 @@
         updateAuthUI();
 
         ensureCurrentUserProfile().then(function (profile) {
+          profile = repairProfileIfNeeded(profile, firebaseUser);
           firebaseApprovalChecked = true;
           currentUserProfile = profile || {};
           inspectorProfile = normalizeInspectorProfile(currentUserProfile.inspectorProfile || {});
-          profileCompleted = !!(currentUserProfile.profileCompleted === true && isInspectorProfileComplete(inspectorProfile));
+          profileCompleted = profileIsComplete(inspectorProfile);
           firebaseApproved = canEnter(profile);
           firebaseBillingState = getBillingAccessState(currentUserProfile || {});
           firebaseBillingActive = !!firebaseBillingState.active;
