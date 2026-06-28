@@ -14,6 +14,25 @@
     return document.getElementById(id);
   }
 
+  function injectBrandCardStyles() {
+    if (document.getElementById("loginBrandCardFix")) return;
+    var style = document.createElement("style");
+    style.id = "loginBrandCardFix";
+    style.textContent = [
+      ".brand-content{background:linear-gradient(145deg,#03286a 0%,#064a9e 58%,#0d82d8 100%)!important;border:1px solid rgba(255,255,255,.2)!important;box-shadow:0 28px 80px rgba(3,40,106,.28)!important;color:#fff!important;}",
+      ".brand-mark{display:flex!important;align-items:center!important;gap:14px!important;width:max-content!important;max-width:100%!important;margin-bottom:30px!important;padding:12px 16px!important;border-radius:20px!important;background:#fff!important;border:1px solid rgba(217,227,239,.95)!important;box-shadow:0 16px 34px rgba(3,40,106,.18)!important;}",
+      ".brand-mark img{width:52px!important;height:52px!important;object-fit:contain!important;}",
+      ".brand-content h1{color:#fff!important;}",
+      ".brand-content p{color:rgba(255,255,255,.86)!important;}",
+      ".feature-pill{background:rgba(255,255,255,.12)!important;border:1px solid rgba(255,255,255,.2)!important;color:rgba(255,255,255,.94)!important;}",
+      ".feature-pill span{background:rgba(255,255,255,.18)!important;color:#fff!important;}",
+      ".mobile-brand{width:max-content!important;max-width:100%!important;padding:10px 14px!important;border-radius:18px!important;background:#fff!important;border:1px solid #d9e3ef!important;box-shadow:0 12px 28px rgba(3,40,106,.08)!important;}"
+    ].join("\n");
+    document.head.appendChild(style);
+  }
+
+  injectBrandCardStyles();
+
   function show(id, visible) {
     var el = byId(id);
     if (el) el.hidden = !visible;
@@ -401,6 +420,7 @@
   }
 
   document.addEventListener("DOMContentLoaded", function () {
+    injectBrandCardStyles();
     bindButton("landingCreateBtn", function () { openModal("create"); });
     bindButton("landingSignInBtn", function () { openModal("signin"); });
     bindButton("authModalCloseBtn", closeModal);
