@@ -13,7 +13,7 @@
 
   loadScript("https://cdn.jsdelivr.net/gh/kkieren999/BarrierCheck@4db56f53565ad851f81d7ec3a85beae19e96a8db/BarrierCheck_APP/app/script.js")
     .then(function () { return loadScript("./firebase-config.js?v=20260628barriercheck32290"); })
-    .then(function () { return loadScript("./app-access-override.js?v=20260628access5"); })
+    .then(function () { return loadScript("./app-access-override.js?v=20260628trialflow1"); })
     .then(function () {
       if (document.readyState !== "loading" && typeof init === "function") init();
     })
