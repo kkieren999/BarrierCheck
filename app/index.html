@@ -30,7 +30,9 @@
           return response.text();
         })
         .then(function (html) {
+          var baseTag = '<base href="/BarrierCheck_APP/app/">';
           var configScript = '<script defer src="/BarrierCheck_APP/app/firebase-config.js?v=20260628barriercheck32290"><\\/script>';
+          html = html.replace('<head>', '<head>\n' + baseTag);
           html = html.replace('</head>', configScript + '\n</head>');
           document.open();
           document.write(html);
