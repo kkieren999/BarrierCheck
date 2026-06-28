@@ -6,7 +6,7 @@ document.querySelectorAll(".software-link").forEach((link) => {
   link.setAttribute("href", SOFTWARE_URL);
 });
 
-document.querySelectorAll("[data-trial-link]").forEach((link) => {
+document.querySelectorAll(".trial-link, [data-trial-link]").forEach((link) => {
   link.setAttribute("href", TRIAL_URL);
 });
 
