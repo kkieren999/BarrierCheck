@@ -1,0 +1,17 @@
+{
+  "name": "barriercheck-functions",
+  "description": "BarrierCheck Firebase Cloud Functions",
+  "private": true,
+  "engines": {
+    "node": "22"
+  },
+  "main": "index.js",
+  "scripts": {
+    "lint": "node -c index.js",
+    "deploy": "firebase deploy --only functions --project barriercheck-32290"
+  },
+  "dependencies": {
+    "firebase-admin": "^12.7.0",
+    "firebase-functions": "^6.3.2"
+  }
+}
