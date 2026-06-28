@@ -50,19 +50,30 @@ npm run lint
 cd ..
 ```
 
-## 4. Deploy functions and Firestore rules
+## 4. Deploy functions first
+
+Deploy the backend before deploying the stricter Firestore rules:
 
 ```bash
-firebase deploy --only functions,firestore:rules --project barriercheck-32290
+firebase deploy --only functions --project barriercheck-32290
 ```
 
 This deploys:
 
 - `createAccountProfile`
 - `requestAccountDeletion`
-- Firestore rules that stop users creating their own profile directly
 
-## 5. Test
+## 5. Then deploy Firestore rules
+
+Only do this after the functions deploy succeeds:
+
+```bash
+firebase deploy --only firestore:rules --project barriercheck-32290
+```
+
+These rules stop users from creating their own profile directly. New account creation then depends on the server-side Cloud Function.
+
+## 6. Test
 
 Open:
 
@@ -92,4 +103,4 @@ users/{newUid}.freeInspectionLimit = 0
 
 ## Important
 
-After these rules are deployed, account creation depends on the Cloud Function. If the function is not deployed, new account creation will fail instead of granting a client-side free trial.
+After the stricter Firestore rules are deployed, account creation depends on the Cloud Function. If the function is not deployed, new account creation will fail instead of granting a client-side free trial.
