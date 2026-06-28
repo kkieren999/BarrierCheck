@@ -10,6 +10,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js" defer></script>
   <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-functions-compat.js" defer></script>
   <script src="./admin.js?v=20260616phase3" defer></script>
+  <script src="./firebase-config.js?v=20260628barriercheck32290" defer></script>
 </head>
 <body class="admin-page-body">
   <main class="admin-shell admin-page">
@@ -22,15 +23,15 @@
         </div>
       </div>
       <nav class="legal-link-row" aria-label="Admin navigation">
-        <a href="./index.html">Open app</a>
-        <a href="./login.html">Login</a>
+        <a href="/app/">Open app</a>
+        <a href="/app/login/">Login</a>
       </nav>
     </header>
 
     <section class="admin-card">
       <h2>Inspector approval workflow</h2>
       <p class="admin-status" id="adminStatus">Checking admin access...</p>
-      <p class="admin-note">Use this screen after verifying the user against the relevant Queensland pool safety inspector register. Approval starts the user's 1-month free trial.</p>
+      <p class="admin-note">Use this screen after verifying the user against the relevant Queensland pool safety inspector register. Approval unlocks the user's first 3 free inspections.</p>
       <div class="admin-actions">
         <button id="refreshPendingBtn" class="admin-secondary-btn" type="button">Refresh Pending Users</button>
         <button id="signOutAdminBtn" class="admin-danger-btn" type="button">Sign Out</button>
