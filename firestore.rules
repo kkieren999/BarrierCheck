@@ -25,45 +25,6 @@ service cloud.firestore {
         );
     }
 
-    function hasNoAdminCreateFields() {
-      return (!request.resource.data.keys().hasAny(["admin"]) || request.resource.data.admin == false)
-        && (!request.resource.data.keys().hasAny(["isAdmin"]) || request.resource.data.isAdmin == false)
-        && !request.resource.data.keys().hasAny([
-          "approvedAt",
-          "approvedBy",
-          "verifiedAt",
-          "rejectedAt",
-          "rejectedBy",
-          "suspendedAt",
-          "suspendedBy",
-          "manualPaid",
-          "stripeCustomerId",
-          "stripeSubscriptionId",
-          "currentPeriodEndsAt",
-          "emailLog"
-        ]);
-    }
-
-    function isFreeTrialCreate() {
-      return (!request.resource.data.keys().hasAny(["billingAccess"])
-          || request.resource.data.billingAccess in ["free_inspections", "pending_verification"])
-        && (!request.resource.data.keys().hasAny(["subscriptionStatus"])
-          || request.resource.data.subscriptionStatus in ["free_inspections", "pending_verification"])
-        && (!request.resource.data.keys().hasAny(["freeInspectionLimit"])
-          || request.resource.data.freeInspectionLimit <= 3)
-        && (!request.resource.data.keys().hasAny(["freeInspectionsUsed"])
-          || request.resource.data.freeInspectionsUsed == 0);
-    }
-
-    function isCreatingOwnPendingProfile(userId) {
-      return isOwner(userId)
-        && request.resource.data.approved == false
-        && request.resource.data.role == "pending"
-        && request.resource.data.verificationStatus == "pending"
-        && hasNoAdminCreateFields()
-        && isFreeTrialCreate();
-    }
-
     function isSafeOwnProfileUpdate(userId) {
       return isOwner(userId)
         && !request.resource.data.diff(resource.data).changedKeys().hasAny([
@@ -87,6 +48,11 @@ service cloud.firestore {
           "freeInspectionLimit",
           "freeInspectionsUsed",
           "freeInspectionsStartedAt",
+          "freeTrialPolicyVersion",
+          "freeTrialEligibilityNoticeAccepted",
+          "freeTrialEligibilityNoticeAcceptedAt",
+          "trialEntitlementCheckStatus",
+          "deletionDoesNotResetTrial",
           "approvedAt",
           "approvedBy",
           "verifiedAt",
@@ -96,12 +62,16 @@ service cloud.firestore {
           "suspendedAt",
           "suspendedBy",
           "suspensionReason",
+          "deletionRequestedAt",
+          "deletionStatus",
           "emailLog"
         ]);
     }
 
     match /users/{userId} {
-      allow create: if isCreatingOwnPendingProfile(userId) || isAdmin();
+      // User profile creation is handled by the createAccountProfile Cloud Function
+      // so free-trial eligibility can be checked server-side with a secret HMAC.
+      allow create: if isAdmin();
       allow get: if isOwner(userId) || isAdmin();
       allow list: if isAdmin();
       allow update: if isSafeOwnProfileUpdate(userId) || isAdmin();
@@ -116,10 +86,15 @@ service cloud.firestore {
       allow create, read, update, delete: if isAdmin();
     }
 
+    // Minimal anti-abuse records for free-trial eligibility.
+    // These should contain hashed/minimised identifiers only, not raw licence numbers.
+    // Client users cannot read or write them; server/Admin SDK manages them.
     match /trialEntitlements/{entitlementId} {
       allow read, write: if isAdmin();
     }
 
+    // Optional account deletion audit/minimisation records.
+    // Client users cannot create or inspect these directly.
     match /accountDeletionRecords/{recordId} {
       allow read, write: if isAdmin();
     }
