@@ -14,13 +14,15 @@
     .signup-grid { display: grid; gap: 12px; }
     .trial-note-box { margin: 14px 0; padding: 13px 14px; border-radius: 18px; background: #f2f9ff; color: #17304f; font-size: .92rem; line-height: 1.45; }
     .trial-note-box strong { display: block; color: #03286a; margin-bottom: 4px; }
+    .auth-button-stack { display: grid; gap: 10px; }
+    .login-apple-btn { width: 100%; border: 0; border-radius: 999px; padding: 13px 18px; background: #111; color: #fff; font: inherit; font-weight: 900; cursor: pointer; box-shadow: 0 10px 20px rgba(0,0,0,.12); }
   </style>
   <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js" defer></script>
   <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js" defer></script>
   <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js" defer></script>
   <script src="/BarrierCheck_APP/app/login.js?v=20260616barriercheck1" defer></script>
   <script src="/BarrierCheck_APP/app/firebase-config.js?v=20260628barriercheck32290" defer></script>
-  <script src="/BarrierCheck_APP/app/login-access-override.js?v=20260628trialflow1" defer></script>
+  <script src="/BarrierCheck_APP/app/login-access-override.js?v=20260628apple1" defer></script>
   <script defer>
     document.addEventListener("DOMContentLoaded", function () {
       function showTab(create) {
@@ -63,7 +65,7 @@
 
       <div class="login-intro">
         <h2>Welcome to BarrierCheck</h2>
-        <p>Sign in or create an inspector account to start your free trial.</p>
+        <p>Sign in or create an inspector account with Google or Apple.</p>
       </div>
 
       <div class="login-mode-tabs" role="tablist" aria-label="Choose sign in or create account">
@@ -72,28 +74,15 @@
       </div>
 
       <section id="signInPanel" role="tabpanel" aria-labelledby="signInTabBtn">
-        <p class="login-panel-note">Use your BarrierCheck account to access cloud-saved inspections.</p>
-        <form id="emailLoginForm" class="login-form">
-          <label class="login-field">
-            <span>Email</span>
-            <input id="loginEmail" type="email" autocomplete="email" required />
-          </label>
-
-          <label class="login-field">
-            <span>Password</span>
-            <input id="loginPassword" type="password" autocomplete="current-password" required />
-          </label>
-
-          <button class="login-primary-btn" type="submit">Sign in</button>
-        </form>
-
-        <div class="login-divider"><span>or</span></div>
-
-        <button id="googleSignInBtn" class="login-google-btn" type="button">Sign in with Google</button>
+        <p class="login-panel-note">Use your Google or Apple account to access cloud-saved inspections.</p>
+        <div class="auth-button-stack">
+          <button id="googleSignInBtn" class="login-google-btn" type="button">Continue with Google</button>
+          <button id="appleSignInBtn" class="login-apple-btn" type="button">Continue with Apple</button>
+        </div>
       </section>
 
       <section id="createPanel" role="tabpanel" aria-labelledby="createTabBtn" hidden>
-        <p class="login-panel-note">Create your inspector account, complete your profile, and start with 3 free inspections while verification is pending.</p>
+        <p class="login-panel-note">Enter your inspector details, then create your account with Google or Apple.</p>
 
         <form id="signupForm" class="login-form signup-grid">
           <label class="login-field">
@@ -104,11 +93,6 @@
           <label class="login-field">
             <span>Email</span>
             <input id="signupEmail" type="email" autocomplete="email" required />
-          </label>
-
-          <label class="login-field">
-            <span>Password</span>
-            <input id="signupPassword" type="password" autocomplete="new-password" required />
           </label>
 
           <label class="login-field">
@@ -140,12 +124,12 @@
             <input id="marketingOptInCheck" type="checkbox" />
             <span>Send me BarrierCheck product updates and marketing emails. I can unsubscribe later.</span>
           </label>
-
-          <button id="createAccountBtn" class="login-primary-btn" type="submit">Create inspector account</button>
         </form>
 
-        <div class="login-divider"><span>or</span></div>
-        <button id="googleCreateBtn" class="login-google-btn" type="button">Create with Google</button>
+        <div class="auth-button-stack">
+          <button id="googleCreateBtn" class="login-google-btn" type="button">Create with Google</button>
+          <button id="appleCreateBtn" class="login-apple-btn" type="button">Create with Apple</button>
+        </div>
       </section>
 
       <div id="pendingBox" class="login-pending-box" hidden>
