@@ -1,6 +1,32 @@
 // Login access patch for owner/admin accounts.
-// This lets BarrierCheck open for users marked as approved, admin, or active in Firestore.
+// This also ensures new accounts get a complete inspectorProfile object shape.
 (function () {
+  function defaultProfileIcon(user) {
+    var googleUrl = "";
+    if (user && user.photoURL) googleUrl = user.photoURL;
+    if (googleUrl) return { type: "google", photoURL: googleUrl, avatarId: "" };
+    return { type: "default", photoURL: "", avatarId: "default" };
+  }
+
+  window.buildInitialInspectorProfile = function (user) {
+    return {
+      inspectorName: user && user.displayName ? user.displayName : "",
+      licenceNumber: "",
+      inspectorEmail: user && user.email ? user.email : "",
+      inspectorPhone: "",
+      businessName: "",
+      businessAddress: "",
+      businessAbn: "",
+      businessWebsite: "",
+      reportEmail: user && user.email ? user.email : "",
+      reportPhone: "",
+      reportLogoUrl: "",
+      reportFooterText: "",
+      inspectionNumberPrefix: "BC",
+      profileIcon: defaultProfileIcon(user)
+    };
+  };
+
   function hasApprovedAccess(profile) {
     if (!profile) return false;
     return profile.approved === true
