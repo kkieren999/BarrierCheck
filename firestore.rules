@@ -1,0 +1,86 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return signedIn() && request.auth.uid == userId;
+    }
+
+    function currentUserDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    function isAdmin() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && (
+          currentUserDoc().data.role == "admin"
+          || currentUserDoc().data.admin == true
+          || currentUserDoc().data.isAdmin == true
+        );
+    }
+
+    function isCreatingOwnPendingProfile(userId) {
+      return isOwner(userId)
+        && request.resource.data.approved == false
+        && request.resource.data.role == "pending"
+        && request.resource.data.verificationStatus == "pending";
+    }
+
+    function isSafeOwnProfileUpdate(userId) {
+      return isOwner(userId)
+        && !request.resource.data.diff(resource.data).changedKeys().hasAny([
+          "approved",
+          "role",
+          "admin",
+          "isAdmin",
+          "verificationStatus",
+          "verificationMethod",
+          "verificationNotes",
+          "qbccNameMatched",
+          "qbccLicenceMatched",
+          "qbccCheckedAt",
+          "qbccCheckedBy",
+          "subscriptionStatus",
+          "billingAccess",
+          "manualPaid",
+          "stripeCustomerId",
+          "stripeSubscriptionId",
+          "currentPeriodEndsAt",
+          "freeInspectionLimit",
+          "freeInspectionsUsed",
+          "freeInspectionsStartedAt",
+          "approvedAt",
+          "approvedBy",
+          "verifiedAt",
+          "rejectedAt",
+          "rejectedBy",
+          "rejectionReason",
+          "suspendedAt",
+          "suspendedBy",
+          "suspensionReason"
+        ]);
+    }
+
+    match /users/{userId} {
+      allow create: if isCreatingOwnPendingProfile(userId) || isAdmin();
+      allow get: if isOwner(userId) || isAdmin();
+      allow list: if isAdmin();
+      allow update: if isSafeOwnProfileUpdate(userId) || isAdmin();
+      allow delete: if isAdmin();
+
+      match /inspections/{inspectionId} {
+        allow read, create, update, delete: if isOwner(userId) || isAdmin();
+      }
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
