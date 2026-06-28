@@ -1,9 +1,13 @@
-const SOFTWARE_URL = "../app/login.html";
-const TRIAL_URL = "../app/login.html?signup=trial";
+const SOFTWARE_URL = "/BarrierCheck_APP/app/login.html";
+const TRIAL_URL = "/BarrierCheck_APP/app/login.html?signup=trial";
 const STRIPE_PRICE_LOOKUP_KEY = "barriercheck_monthly";
 
 document.querySelectorAll(".software-link").forEach((link) => {
   link.setAttribute("href", SOFTWARE_URL);
+});
+
+document.querySelectorAll("[data-trial-link]").forEach((link) => {
+  link.setAttribute("href", TRIAL_URL);
 });
 
 document.querySelectorAll("[data-price-key]").forEach((input) => {
