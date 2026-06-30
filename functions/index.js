@@ -198,35 +198,37 @@ exports.createAccountProfile = onCall(
 );
 
 async function handleAccountDeletion(request) {
-  if (!request.auth) {
-    throw new HttpsError("unauthenticated", "Sign in before deleting an account.");
-  }
-
-  const data = request.data || {};
-  if (clean(data.confirm).toUpperCase() !== "DELETE") {
-    throw new HttpsError("invalid-argument", "Type DELETE to confirm account deletion.");
-  }
-
-  const uid = request.auth.uid;
-  const userRef = db.collection("users").doc(uid);
-  const userSnap = await userRef.get();
-  if (!userSnap.exists) {
-    try {
-      await getAuth().deleteUser(uid);
-    } catch (error) {
-      if (error.code !== "auth/user-not-found") throw error;
+  try {
+    if (!request.auth) {
+      throw new HttpsError("unauthenticated", "Sign in before deleting an account.");
     }
-    return { ok: true, status: "deleted" };
-  }
 
-  const user = userSnap.data() || {};
-  const profile = user.inspectorProfile || {};
-  const licenceNormalised = normalizeLicence(profile.licenceNumber || user.licenceNumber || "");
-  const phone = normalizeAuPhone(profile.inspectorPhone || user.phoneNumber || "");
-  const deletionRecordRef = db.collection("accountDeletionRecords").doc(uid);
+    const data = request.data || {};
+    if (clean(data.confirm).toUpperCase() !== "DELETE") {
+      throw new HttpsError("invalid-argument", "Type DELETE to confirm account deletion.");
+    }
 
-  await db.runTransaction(async (tx) => {
-    tx.set(deletionRecordRef, {
+    const uid = request.auth.uid;
+    const userRef = db.collection("users").doc(uid);
+    const userSnap = await userRef.get();
+
+    if (!userSnap.exists) {
+      try {
+        await getAuth().deleteUser(uid);
+      } catch (error) {
+        if (error.code !== "auth/user-not-found") throw error;
+      }
+      return { ok: true, status: "deleted" };
+    }
+
+    const user = userSnap.data() || {};
+    const profile = user.inspectorProfile || {};
+    const licenceNormalised = normalizeLicence(profile.licenceNumber || user.licenceNumber || "");
+    const phone = normalizeAuPhone(profile.inspectorPhone || user.phoneNumber || "");
+    const deletionRecordRef = db.collection("accountDeletionRecords").doc(uid);
+    const batch = db.batch();
+
+    batch.set(deletionRecordRef, {
       userId: uid,
       requestedAt: FieldValue.serverTimestamp(),
       status: "deleted",
@@ -236,7 +238,7 @@ async function handleAccountDeletion(request) {
 
     if (licenceNormalised) {
       const licenceHash = hmac(licenceNormalised, "licence");
-      tx.set(db.collection("trialEntitlements").doc("licence_" + licenceHash), {
+      batch.set(db.collection("trialEntitlements").doc("licence_" + licenceHash), {
         type: "licence",
         hash: licenceHash,
         trialUsed: true,
@@ -248,7 +250,7 @@ async function handleAccountDeletion(request) {
 
     if (phone) {
       const phoneHash = hmac(phone, "phone");
-      tx.set(db.collection("trialEntitlements").doc("phone_" + phoneHash), {
+      batch.set(db.collection("trialEntitlements").doc("phone_" + phoneHash), {
         type: "phone",
         hash: phoneHash,
         trialUsed: true,
@@ -258,7 +260,9 @@ async function handleAccountDeletion(request) {
       }, { merge: true });
     }
 
-    tx.set(userRef, {
+    // Use update() for delete sentinels. This avoids the FieldValue.delete()
+    // edge case that can produce a generic callable "internal" error.
+    batch.update(userRef, {
       deletionRequestedAt: FieldValue.serverTimestamp(),
       deletionStatus: "deleted",
       role: "deleted",
@@ -270,16 +274,25 @@ async function handleAccountDeletion(request) {
       inspectorProfile: FieldValue.delete(),
       profileCompleted: false,
       updatedAt: FieldValue.serverTimestamp()
-    }, { merge: true });
-  });
+    });
 
-  try {
-    await getAuth().deleteUser(uid);
+    await batch.commit();
+
+    try {
+      await getAuth().deleteUser(uid);
+    } catch (error) {
+      if (error.code !== "auth/user-not-found") throw error;
+    }
+
+    return { ok: true, status: "deleted" };
   } catch (error) {
-    if (error.code !== "auth/user-not-found") throw error;
+    console.error("Account deletion failed", error);
+    if (error instanceof HttpsError) throw error;
+    throw new HttpsError(
+      "failed-precondition",
+      "Account deletion failed on the server: " + (error && error.message ? error.message : "Unknown error")
+    );
   }
-
-  return { ok: true, status: "deleted" };
 }
 
 exports.requestAccountDeletion = onCall(
@@ -287,7 +300,6 @@ exports.requestAccountDeletion = onCall(
   handleAccountDeletion
 );
 
-// Backwards-compatible name for the current app UI.
 exports.deleteMyAccount = onCall(
   { region: REGION, secrets: [trialHmacSecret] },
   handleAccountDeletion
