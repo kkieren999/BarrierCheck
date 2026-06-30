@@ -193,78 +193,102 @@ exports.createAccountProfile = onCall(
       return { freeInspectionLimit: freeLimit, trialEntitlementCheckStatus: entitlementStatus };
     });
 
-    return {
-      ok: true,
-      uid,
-      ...result
-    };
+    return { ok: true, uid, ...result };
   }
 );
 
-exports.requestAccountDeletion = onCall(
-  { region: REGION, secrets: [trialHmacSecret] },
-  async (request) => {
-    if (!request.auth) {
-      throw new HttpsError("unauthenticated", "Sign in before deleting an account.");
+async function handleAccountDeletion(request) {
+  if (!request.auth) {
+    throw new HttpsError("unauthenticated", "Sign in before deleting an account.");
+  }
+
+  const data = request.data || {};
+  if (clean(data.confirm).toUpperCase() !== "DELETE") {
+    throw new HttpsError("invalid-argument", "Type DELETE to confirm account deletion.");
+  }
+
+  const uid = request.auth.uid;
+  const userRef = db.collection("users").doc(uid);
+  const userSnap = await userRef.get();
+  if (!userSnap.exists) {
+    try {
+      await getAuth().deleteUser(uid);
+    } catch (error) {
+      if (error.code !== "auth/user-not-found") throw error;
     }
+    return { ok: true, status: "deleted" };
+  }
 
-    const uid = request.auth.uid;
-    const userRef = db.collection("users").doc(uid);
-    const userSnap = await userRef.get();
-    if (!userSnap.exists) {
-      throw new HttpsError("not-found", "Account profile was not found.");
-    }
+  const user = userSnap.data() || {};
+  const profile = user.inspectorProfile || {};
+  const licenceNormalised = normalizeLicence(profile.licenceNumber || user.licenceNumber || "");
+  const phone = normalizeAuPhone(profile.inspectorPhone || user.phoneNumber || "");
+  const deletionRecordRef = db.collection("accountDeletionRecords").doc(uid);
 
-    const user = userSnap.data() || {};
-    const profile = user.inspectorProfile || {};
-    const licenceNormalised = normalizeLicence(profile.licenceNumber || user.licenceNumber || "");
-    const phone = normalizeAuPhone(profile.inspectorPhone || user.phoneNumber || "");
-    const deletionRecordRef = db.collection("accountDeletionRecords").doc(uid);
+  await db.runTransaction(async (tx) => {
+    tx.set(deletionRecordRef, {
+      userId: uid,
+      requestedAt: FieldValue.serverTimestamp(),
+      status: "deleted",
+      retentionReason: "account_deletion_audit_and_free_trial_eligibility",
+      policyVersion: POLICY_VERSION
+    }, { merge: true });
 
-    await db.runTransaction(async (tx) => {
-      tx.set(deletionRecordRef, {
-        userId: uid,
-        requestedAt: FieldValue.serverTimestamp(),
-        restoreUntil: FieldValue.serverTimestamp(),
-        status: "deletion_requested",
-        retentionReason: "account_deletion_audit_and_free_trial_eligibility",
+    if (licenceNormalised) {
+      const licenceHash = hmac(licenceNormalised, "licence");
+      tx.set(db.collection("trialEntitlements").doc("licence_" + licenceHash), {
+        type: "licence",
+        hash: licenceHash,
+        trialUsed: true,
+        lastAccountDeletedAt: FieldValue.serverTimestamp(),
+        retentionReason: "free_trial_eligibility",
         policyVersion: POLICY_VERSION
       }, { merge: true });
+    }
 
-      if (licenceNormalised) {
-        const licenceHash = hmac(licenceNormalised, "licence");
-        tx.set(db.collection("trialEntitlements").doc("licence_" + licenceHash), {
-          type: "licence",
-          hash: licenceHash,
-          trialUsed: true,
-          lastAccountDeletedAt: FieldValue.serverTimestamp(),
-          retentionReason: "free_trial_eligibility",
-          policyVersion: POLICY_VERSION
-        }, { merge: true });
-      }
-
-      if (phone) {
-        const phoneHash = hmac(phone, "phone");
-        tx.set(db.collection("trialEntitlements").doc("phone_" + phoneHash), {
-          type: "phone",
-          hash: phoneHash,
-          trialUsed: true,
-          lastAccountDeletedAt: FieldValue.serverTimestamp(),
-          retentionReason: "free_trial_eligibility",
-          policyVersion: POLICY_VERSION
-        }, { merge: true });
-      }
-
-      tx.set(userRef, {
-        deletionRequestedAt: FieldValue.serverTimestamp(),
-        deletionStatus: "requested",
-        role: "deleted",
-        billingAccess: "blocked",
-        subscriptionStatus: "blocked",
-        updatedAt: FieldValue.serverTimestamp()
+    if (phone) {
+      const phoneHash = hmac(phone, "phone");
+      tx.set(db.collection("trialEntitlements").doc("phone_" + phoneHash), {
+        type: "phone",
+        hash: phoneHash,
+        trialUsed: true,
+        lastAccountDeletedAt: FieldValue.serverTimestamp(),
+        retentionReason: "free_trial_eligibility",
+        policyVersion: POLICY_VERSION
       }, { merge: true });
-    });
+    }
 
-    return { ok: true, status: "deletion_requested" };
+    tx.set(userRef, {
+      deletionRequestedAt: FieldValue.serverTimestamp(),
+      deletionStatus: "deleted",
+      role: "deleted",
+      billingAccess: "blocked",
+      subscriptionStatus: "blocked",
+      email: FieldValue.delete(),
+      displayName: FieldValue.delete(),
+      phoneNumber: FieldValue.delete(),
+      inspectorProfile: FieldValue.delete(),
+      profileCompleted: false,
+      updatedAt: FieldValue.serverTimestamp()
+    }, { merge: true });
+  });
+
+  try {
+    await getAuth().deleteUser(uid);
+  } catch (error) {
+    if (error.code !== "auth/user-not-found") throw error;
   }
+
+  return { ok: true, status: "deleted" };
+}
+
+exports.requestAccountDeletion = onCall(
+  { region: REGION, secrets: [trialHmacSecret] },
+  handleAccountDeletion
+);
+
+// Backwards-compatible name for the current app UI.
+exports.deleteMyAccount = onCall(
+  { region: REGION, secrets: [trialHmacSecret] },
+  handleAccountDeletion
 );
