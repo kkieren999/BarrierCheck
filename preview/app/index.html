@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex,nofollow" />
+  <title>BarrierCheck Workflow Preview</title>
+  <style>
+    html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: #f7fcff; }
+    iframe { position: fixed; inset: 0; width: 100%; height: 100%; border: 0; display: block; background: #f7fcff; }
+    .preview-badge {
+      position: fixed;
+      top: 8px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 999999;
+      pointer-events: none;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: rgba(21, 75, 95, 0.94);
+      color: #fff;
+      font: 700 11px/1.2 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      letter-spacing: .08em;
+      box-shadow: 0 3px 12px rgba(0,0,0,.18);
+    }
+  </style>
+</head>
+<body>
+  <div class="preview-badge">WORKFLOW PREVIEW</div>
+  <iframe id="barrierCheckPreview" src="/BarrierCheck_APP/app/index.html?from=clean-app&workflowPreview=1" title="BarrierCheck workflow preview"></iframe>
+
+  <script>
+    (function () {
+      var frame = document.getElementById("barrierCheckPreview");
+      var previewCommit = "f0c66647bc77ca638e93d1fc7e74ab7ca0985eec";
+      var base = "https://cdn.jsdelivr.net/gh/kkieren999/BarrierCheck@" + previewCommit + "/BarrierCheck_APP/app/";
+
+      function injectScript(doc, src) {
+        return new Promise(function (resolve, reject) {
+          var script = doc.createElement("script");
+          script.src = src;
+          script.async = false;
+          script.onload = resolve;
+          script.onerror = function () { reject(new Error("Could not load preview script: " + src)); };
+          doc.head.appendChild(script);
+        });
+      }
+
+      function installPreview() {
+        var doc;
+        try {
+          doc = frame.contentDocument || frame.contentWindow.document;
+        } catch (error) {
+          console.error("BarrierCheck preview could not access the app frame", error);
+          return;
+        }
+
+        if (!doc || !doc.head || !doc.body) return;
+        if (doc.documentElement.dataset.workflowPreviewInstalled === "1") return;
+
+        var path = "";
+        try { path = frame.contentWindow.location.pathname || ""; } catch (error) {}
+        if (path.indexOf("/BarrierCheck_APP/app/") === -1 || path.indexOf("login.html") !== -1) return;
+
+        doc.documentElement.dataset.workflowPreviewInstalled = "1";
+
+        injectScript(doc, base + "inspection-streamline.js")
+          .then(function () { return injectScript(doc, base + "inspection-streamline-order-fix.js"); })
+          .then(function () {
+            // The preview layer is normally loaded before init. Here it is injected
+            // into the already-loaded same-origin app; lifecycle wrappers still run
+            // before the inspector starts or opens an inspection.
+            try {
+              doc.dispatchEvent(new Event("DOMContentLoaded", { bubbles: true }));
+            } catch (error) {}
+            console.info("BarrierCheck workflow preview loaded", previewCommit);
+          })
+          .catch(function (error) {
+            console.error("BarrierCheck workflow preview failed", error);
+            doc.documentElement.dataset.workflowPreviewInstalled = "0";
+          });
+      }
+
+      frame.addEventListener("load", function () {
+        window.setTimeout(installPreview, 0);
+      });
+    })();
+  </script>
+</body>
+</html>
