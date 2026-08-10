@@ -16,6 +16,7 @@
     .then(function () { return loadScript("./app-access-override.js?v=20260628trialflow1"); })
     .then(function () { return loadScript("./inspection-streamline.js?v=20260810streamline1"); })
     .then(function () { return loadScript("./inspection-streamline-order-fix.js?v=20260810streamline1"); })
+    .then(function () { return loadScript("./address-autocomplete-layout-fix.js?v=20260810addressfix1"); })
     .then(function () { return loadScript("./compact-report.js?v=20260810compact1"); })
     .then(function () { return loadScript("./rectification-library.js?v=20260810rectification1"); })
     .then(function () { return loadScript("./customer-report-v2.js?v=20260810customerreport2"); })
