@@ -15,6 +15,7 @@
     .then(function () { return loadScript("./firebase-config.js?v=20260628barriercheck32290"); })
     .then(function () { return loadScript("./app-access-override.js?v=20260628trialflow1"); })
     .then(function () { return loadScript("./inspection-streamline.js?v=20260810streamline1"); })
+    .then(function () { return loadScript("./inspection-streamline-order-fix.js?v=20260810streamline1"); })
     .then(function () {
       if (document.readyState !== "loading" && typeof init === "function") init();
     })
