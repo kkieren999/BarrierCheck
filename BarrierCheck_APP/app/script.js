@@ -16,6 +16,7 @@
     .then(function () { return loadScript("./app-access-override.js?v=20260628trialflow1"); })
     .then(function () { return loadScript("./inspection-streamline.js?v=20260810streamline1"); })
     .then(function () { return loadScript("./inspection-streamline-order-fix.js?v=20260810streamline1"); })
+    .then(function () { return loadScript("./compact-report.js?v=20260810compact1"); })
     .then(function () {
       if (document.readyState !== "loading" && typeof init === "function") init();
     })
