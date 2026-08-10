@@ -14,6 +14,14 @@
   loadScript("https://cdn.jsdelivr.net/gh/kkieren999/BarrierCheck@4db56f53565ad851f81d7ec3a85beae19e96a8db/BarrierCheck_APP/app/script.js")
     .then(function () { return loadScript("./firebase-config.js?v=20260628barriercheck32290"); })
     .then(function () { return loadScript("./app-access-override.js?v=20260628trialflow1"); })
+    .then(function () { return loadScript("./inspection-streamline.js?v=20260810streamline1"); })
+    .then(function () { return loadScript("./inspection-streamline-order-fix.js?v=20260810streamline1"); })
+    .then(function () { return loadScript("./address-autocomplete-layout-fix.js?v=20260810addressfix1"); })
+    .then(function () { return loadScript("./inspection-question-rules.js?v=20260810modular1"); })
+    .then(function () { return loadScript("./inspection-question-rules-compat-fix.js?v=20260810modularfix1"); })
+    .then(function () { return loadScript("./compact-report.js?v=20260810compact1"); })
+    .then(function () { return loadScript("./rectification-library.js?v=20260810rectification1"); })
+    .then(function () { return loadScript("./customer-report-v2.js?v=20260810customerreport2"); })
     .then(function () {
       if (document.readyState !== "loading" && typeof init === "function") init();
     })
