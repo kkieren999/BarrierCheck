@@ -32,7 +32,7 @@
   <script>
     (function () {
       var frame = document.getElementById("barrierCheckPreview");
-      var previewCommit = "f0c66647bc77ca638e93d1fc7e74ab7ca0985eec";
+      var previewCommit = "94ee5bfef29a489f842449947710c5caa4a0c1b2";
       var base = "https://cdn.jsdelivr.net/gh/kkieren999/BarrierCheck@" + previewCommit + "/BarrierCheck_APP/app/";
 
       function injectScript(doc, src) {
@@ -66,6 +66,7 @@
 
         injectScript(doc, base + "inspection-streamline.js")
           .then(function () { return injectScript(doc, base + "inspection-streamline-order-fix.js"); })
+          .then(function () { return injectScript(doc, base + "compact-report.js"); })
           .then(function () {
             // The preview layer is normally loaded before init. Here it is injected
             // into the already-loaded same-origin app; lifecycle wrappers still run
