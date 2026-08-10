@@ -32,7 +32,7 @@
   <script>
     (function () {
       var frame = document.getElementById("barrierCheckPreview");
-      var previewCommit = "7311753aa70c2ffb10b8e8acec30fadb65253811";
+      var previewCommit = "9ca98b1f229d01ffa2d2dae54ffccc496542a78e";
       var base = "https://cdn.jsdelivr.net/gh/kkieren999/BarrierCheck@" + previewCommit + "/BarrierCheck_APP/app/";
 
       function injectScript(doc, src) {
@@ -67,6 +67,7 @@
         injectScript(doc, base + "inspection-streamline.js")
           .then(function () { return injectScript(doc, base + "inspection-streamline-order-fix.js"); })
           .then(function () { return injectScript(doc, base + "address-autocomplete-layout-fix.js"); })
+          .then(function () { return injectScript(doc, base + "inspection-question-rules.js"); })
           .then(function () { return injectScript(doc, base + "compact-report.js"); })
           .then(function () { return injectScript(doc, base + "rectification-library.js"); })
           .then(function () { return injectScript(doc, base + "customer-report-v2.js"); })
