@@ -69,7 +69,7 @@
     return {
       billingAccess: billing && billing !== "pending_verification" ? profile.billingAccess : "free_inspections",
       subscriptionStatus: subscription && subscription !== "pending_verification" ? profile.subscriptionStatus : "free_inspections",
-      freeInspectionLimit: Number(profile && profile.freeInspectionLimit || 3),
+      freeInspectionLimit: profile && typeof profile.freeInspectionLimit === "number" ? profile.freeInspectionLimit : 3,
       freeInspectionsUsed: Number(profile && profile.freeInspectionsUsed || 0)
     };
   }
@@ -163,10 +163,10 @@
           }
           if (firebaseAuth && firebaseAuth.signOut) {
             return firebaseAuth.signOut().catch(function () {}).then(function () {
-              window.location.replace("login.html?accountDeleted=1");
+              try { window.top.location.replace("/app/login/?accountDeleted=1"); } catch (error) { window.location.replace("/app/login/?accountDeleted=1"); }
             });
           }
-          window.location.replace("login.html?accountDeleted=1");
+          try { window.top.location.replace("/app/login/?accountDeleted=1"); } catch (error) { window.location.replace("/app/login/?accountDeleted=1"); }
           return null;
         })
         .catch(function (error) {

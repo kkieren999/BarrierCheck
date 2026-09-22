@@ -3,6 +3,7 @@ const crypto = require("crypto");
 const { initializeApp } = require("firebase-admin/app");
 const { getAuth } = require("firebase-admin/auth");
 const { getFirestore, FieldValue } = require("firebase-admin/firestore");
+const { getStorage } = require("firebase-admin/storage");
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const { defineSecret } = require("firebase-functions/params");
 
@@ -197,6 +198,103 @@ exports.createAccountProfile = onCall(
   }
 );
 
+
+function finiteNumber(value, fallback) {
+  return typeof value === "number" && Number.isFinite(value) ? value : fallback;
+}
+
+function accountIsBlocked(user) {
+  const blocked = ["rejected", "suspended", "blocked", "deleted", "trial_already_used"];
+  return blocked.includes(clean(user.role).toLowerCase())
+    || blocked.includes(clean(user.verificationStatus).toLowerCase())
+    || blocked.includes(clean(user.billingAccess).toLowerCase())
+    || blocked.includes(clean(user.subscriptionStatus).toLowerCase());
+}
+
+exports.consumeFreeInspection = onCall(
+  { region: REGION },
+  async (request) => {
+    if (!request.auth) {
+      throw new HttpsError("unauthenticated", "Sign in before starting an inspection.");
+    }
+
+    const uid = request.auth.uid;
+    const userRef = db.collection("users").doc(uid);
+
+    return db.runTransaction(async (tx) => {
+      const userSnap = await tx.get(userRef);
+      if (!userSnap.exists) {
+        throw new HttpsError("not-found", "BarrierCheck profile not found.");
+      }
+
+      const user = userSnap.data() || {};
+      if (accountIsBlocked(user)) {
+        throw new HttpsError("permission-denied", "This account cannot start inspections.");
+      }
+
+      const subscription = clean(user.subscriptionStatus).toLowerCase();
+      const billing = clean(user.billingAccess).toLowerCase();
+      const paid = subscription === "active" || billing === "active";
+      const limit = Math.max(0, finiteNumber(user.freeInspectionLimit, 3));
+      const used = Math.max(0, finiteNumber(user.freeInspectionsUsed, 0));
+
+      if (paid) {
+        return {
+          ok: true,
+          consumed: false,
+          freeInspectionLimit: limit,
+          freeInspectionsUsed: used,
+          freeRemaining: Math.max(0, limit - used)
+        };
+      }
+
+      if (subscription !== "free_inspections" && billing !== "free_inspections") {
+        throw new HttpsError("failed-precondition", "Paid access is required to start another inspection.");
+      }
+
+      if (used >= limit) {
+        throw new HttpsError("resource-exhausted", "No free inspections remain on this account.");
+      }
+
+      const nextUsed = used + 1;
+      tx.update(userRef, {
+        freeInspectionsUsed: nextUsed,
+        updatedAt: FieldValue.serverTimestamp()
+      });
+
+      return {
+        ok: true,
+        consumed: true,
+        freeInspectionLimit: limit,
+        freeInspectionsUsed: nextUsed,
+        freeRemaining: Math.max(0, limit - nextUsed)
+      };
+    });
+  }
+);
+
+async function deleteCollectionInBatches(collectionRef, batchSize = 400) {
+  while (true) {
+    const snapshot = await collectionRef.limit(batchSize).get();
+    if (snapshot.empty) return;
+
+    const batch = db.batch();
+    snapshot.docs.forEach((doc) => batch.delete(doc.ref));
+    await batch.commit();
+
+    if (snapshot.size < batchSize) return;
+  }
+}
+
+async function deleteUserAppData(uid) {
+  await deleteCollectionInBatches(
+    db.collection("users").doc(uid).collection("inspections")
+  );
+
+  const bucket = getStorage().bucket();
+  await bucket.deleteFiles({ prefix: "users/" + uid + "/" });
+}
+
 async function handleAccountDeletion(request) {
   try {
     if (!request.auth) {
@@ -213,6 +311,7 @@ async function handleAccountDeletion(request) {
     const userSnap = await userRef.get();
 
     if (!userSnap.exists) {
+      await deleteUserAppData(uid);
       try {
         await getAuth().deleteUser(uid);
       } catch (error) {
@@ -226,6 +325,9 @@ async function handleAccountDeletion(request) {
     const licenceNormalised = normalizeLicence(profile.licenceNumber || user.licenceNumber || "");
     const phone = normalizeAuPhone(profile.inspectorPhone || user.phoneNumber || "");
     const deletionRecordRef = db.collection("accountDeletionRecords").doc(uid);
+
+    await deleteUserAppData(uid);
+
     const batch = db.batch();
 
     batch.set(deletionRecordRef, {
