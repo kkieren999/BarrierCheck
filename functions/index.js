@@ -278,7 +278,7 @@ async function deleteCollectionInBatches(collectionRef, batchSize = 400) {
     const snapshot = await collectionRef.limit(batchSize).get();
     if (snapshot.empty) return;
 
-    await deleteUserAppData(uid);\n\n    const batch = db.batch();
+    const batch = db.batch();
     snapshot.docs.forEach((doc) => batch.delete(doc.ref));
     await batch.commit();
 
@@ -311,6 +311,7 @@ async function handleAccountDeletion(request) {
     const userSnap = await userRef.get();
 
     if (!userSnap.exists) {
+      await deleteUserAppData(uid);
       try {
         await getAuth().deleteUser(uid);
       } catch (error) {
@@ -324,6 +325,9 @@ async function handleAccountDeletion(request) {
     const licenceNormalised = normalizeLicence(profile.licenceNumber || user.licenceNumber || "");
     const phone = normalizeAuPhone(profile.inspectorPhone || user.phoneNumber || "");
     const deletionRecordRef = db.collection("accountDeletionRecords").doc(uid);
+
+    await deleteUserAppData(uid);
+
     const batch = db.batch();
 
     batch.set(deletionRecordRef, {
