@@ -361,10 +361,19 @@ function scheduleCurrentInspectionSave(delay) {
 }
 
 function flushCurrentInspectionSave() {
-  if (!currentInspectionSaveTimer) return;
-  clearTimeout(currentInspectionSaveTimer);
-  currentInspectionSaveTimer = null;
-  if (inspectionStarted) saveCurrentInspection(false);
+  if (currentInspectionSaveTimer) {
+    clearTimeout(currentInspectionSaveTimer);
+    currentInspectionSaveTimer = null;
+    if (inspectionStarted) saveCurrentInspection(false);
+  }
+
+  if (cloudSavePendingData) {
+    clearTimeout(cloudSaveTimer);
+    cloudSaveTimer = null;
+    var pending = cloudSavePendingData;
+    cloudSavePendingData = null;
+    saveInspectionToCloudNow(pending, false);
+  }
 }
 
 window.scheduleCurrentInspectionSave = scheduleCurrentInspectionSave;
