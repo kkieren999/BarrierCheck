@@ -112,6 +112,12 @@
       addClimbabilitySection();
       addGateSection();
 
+      if (typeof window.BarrierCheckInitialiseLayoutFromForm === "function") {
+        window.BarrierCheckInitialiseLayoutFromForm();
+      } else if (typeof window.BarrierCheckQuestionRulesSync === "function") {
+        window.BarrierCheckQuestionRulesSync();
+      }
+
       saveCurrentInspection(false);
       renderInspectionList();
       showTab("details");

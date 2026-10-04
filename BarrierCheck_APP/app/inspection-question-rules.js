@@ -6,7 +6,7 @@
 
   var VERSION = "20260810.1";
   var saveTimer = null;
-  var observer = null;
+  var syncTimer = null;
   var syncing = false;
 
   var MATERIALS = ["Aluminium", "Glass", "Timber", "Chainwire / mesh", "Masonry", "Other"];
@@ -86,12 +86,24 @@
   }
 
   function scheduleSave() {
+    if (typeof window.scheduleCurrentInspectionSave === "function") {
+      window.scheduleCurrentInspectionSave(300);
+      return;
+    }
     clearTimeout(saveTimer);
     saveTimer = setTimeout(function () {
       if (window.inspectionStarted && typeof window.saveCurrentInspection === "function") {
         window.saveCurrentInspection(false);
       }
-    }, 220);
+    }, 300);
+  }
+
+  function scheduleSync() {
+    clearTimeout(syncTimer);
+    syncTimer = setTimeout(function () {
+      syncTimer = null;
+      syncAll();
+    }, 60);
   }
 
   function injectStyles() {
@@ -485,6 +497,7 @@
     if (syncing) return;
     syncing = true;
     try {
+      pruneDeletedMetadata();
       ensureOverviewFields();
       syncFenceCards();
       syncNczCards();
@@ -492,7 +505,9 @@
       applyDetailsDrivenSuggestions();
       writeConfig(readConfig());
       if (typeof window.updateRequiredFieldMarkers === "function") window.updateRequiredFieldMarkers();
-      if (typeof window.refreshSummary === "function") window.refreshSummary();
+      if (typeof window.BarrierCheckRefreshQuestionSafeguards === "function") {
+        window.BarrierCheckRefreshQuestionSafeguards();
+      }
     } finally {
       syncing = false;
     }
@@ -509,7 +524,7 @@
       var meta = fenceMeta(cfg, fenceId);
       meta[target.getAttribute("data-bcq-field")] = target.value;
       writeConfig(cfg);
-      syncAll();
+      scheduleSync();
       scheduleSave();
       return;
     }
@@ -522,7 +537,7 @@
       if (fence) {
         fenceMeta(cfg, fence.id).groundOpeningObserved = target.value;
         writeConfig(cfg);
-        syncAll();
+        scheduleSync();
         scheduleSave();
       }
       return;
@@ -536,7 +551,7 @@
       if (nczFence) {
         fenceMeta(cfg, nczFence.id).nczClimbables = target.value;
         writeConfig(cfg);
-        syncAll();
+        scheduleSync();
         scheduleSave();
       }
       return;
@@ -550,14 +565,14 @@
       if (gate) {
         gateMeta(cfg, gate.id).gapObserved = target.value;
         writeConfig(cfg);
-        syncAll();
+        scheduleSync();
         scheduleSave();
       }
       return;
     }
 
     if (target.matches('[name="fenceHeight"], [name="nczSideOfBarrier"], [name="poolType"], [data-fence-field="role"], [data-fence-field="location"], [data-component-key]')) {
-      window.setTimeout(function () { syncAll(); }, 0);
+      scheduleSync();
     }
   }
 
@@ -578,7 +593,7 @@
         var result = originalStart.apply(this, arguments);
         var field = configField();
         if (field) field.value = JSON.stringify({ version: VERSION, fences: {}, gates: {} });
-        window.setTimeout(syncAll, 0);
+        scheduleSync();
         return result;
       };
       wrappedStart.__bcqWrapped = true;
@@ -589,7 +604,7 @@
     if (typeof originalLoad === "function" && !originalLoad.__bcqWrapped) {
       var wrappedLoad = function () {
         var result = originalLoad.apply(this, arguments);
-        window.setTimeout(syncAll, 0);
+        scheduleSync();
         return result;
       };
       wrappedLoad.__bcqWrapped = true;
@@ -606,15 +621,12 @@
     document.addEventListener("change", handleConfigChange);
     document.addEventListener("input", function (event) {
       if (event.target && event.target.matches('[name="fenceHeight"]')) {
-        window.setTimeout(syncAll, 0);
+        scheduleSync();
       }
     });
+    document.addEventListener("barriercheck:layout-changed", scheduleSync);
 
-    observer = new MutationObserver(function () {
-      pruneDeletedMetadata();
-      window.setTimeout(syncAll, 0);
-    });
-    observer.observe(document.body, { childList: true, subtree: true });
+    window.BarrierCheckQuestionRulesSync = scheduleSync;
   }
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot, { once: true });
