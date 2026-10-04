@@ -2,6 +2,8 @@
 (function () {
   "use strict";
 
+  var refreshTimer = null;
+
   function clean(value) {
     return String(value === undefined || value === null ? "" : value).trim();
   }
@@ -210,21 +212,27 @@
     clearLegacyBoundaryDefaultUntilHeightKnown();
   }
 
+  function scheduleSafeguardRefresh() {
+    clearTimeout(refreshTimer);
+    refreshTimer = window.setTimeout(function () {
+      refreshTimer = null;
+      refreshSafeguards();
+    }, 0);
+  }
+
   function boot() {
     patchCompletionRules();
     patchLoadMigration();
-    window.setTimeout(refreshSafeguards, 0);
+    scheduleSafeguardRefresh();
 
     document.addEventListener("change", function (event) {
       if (event.target && event.target.matches('[name="fenceHeight"], [data-fence-field="role"], [name="nczSideOfBarrier"]')) {
-        window.setTimeout(refreshSafeguards, 0);
+        scheduleSafeguardRefresh();
       }
     });
+    document.addEventListener("barriercheck:layout-changed", scheduleSafeguardRefresh);
 
-    var observer = new MutationObserver(function () {
-      window.setTimeout(refreshSafeguards, 0);
-    });
-    observer.observe(document.body, { childList: true, subtree: true });
+    window.BarrierCheckRefreshQuestionSafeguards = scheduleSafeguardRefresh;
   }
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot, { once: true });
