@@ -4983,15 +4983,30 @@ function normalizePhotoCollections(collections) {
 function normalizePhotoRecord(input) {
   if (!input) return null;
   if (typeof input === "string") {
-    return { url: input, path: "", uploadedAt: "" };
+    return {
+      url: input,
+      path: "",
+      thumbnailUrl: "",
+      thumbnailPath: "",
+      uploadedAt: ""
+    };
   }
   return {
     url: input.url || input.src || "",
     path: input.path || "",
+    thumbnailUrl: input.thumbnailUrl || input.thumbUrl || "",
+    thumbnailPath: input.thumbnailPath || input.thumbPath || "",
     area: input.area || "",
     name: input.name || "",
     uploadedAt: input.uploadedAt || input.createdAt || "",
-    size: input.size || 0
+    size: input.size || 0,
+    thumbnailSize: input.thumbnailSize || input.thumbSize || 0,
+    width: input.width || 0,
+    height: input.height || 0,
+    thumbnailWidth: input.thumbnailWidth || 0,
+    thumbnailHeight: input.thumbnailHeight || 0,
+    compressionVersion: input.compressionVersion || 1,
+    stamped: input.stamped === true
   };
 }
 
@@ -5067,6 +5082,50 @@ function drawPhotoStamp(ctx, width, height, lines) {
   ctx.restore();
 }
 
+var EVIDENCE_IMAGE_MAX_SIDE = 1600;
+var EVIDENCE_IMAGE_JPEG_QUALITY = 0.76;
+var THUMBNAIL_IMAGE_MAX_SIDE = 480;
+var THUMBNAIL_IMAGE_JPEG_QUALITY = 0.68;
+
+function renderCompressedImage(img, maxSide, quality, stampLines) {
+  return new Promise(function (resolve, reject) {
+    var width = img.width;
+    var height = img.height;
+
+    if (width > maxSide || height > maxSide) {
+      if (width > height) {
+        height = Math.round(height * (maxSide / width));
+        width = maxSide;
+      } else {
+        width = Math.round(width * (maxSide / height));
+        height = maxSide;
+      }
+    }
+
+    var canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    var ctx = canvas.getContext("2d");
+    if (!ctx) {
+      reject(new Error("Could not prepare image compression."));
+      return;
+    }
+
+    ctx.drawImage(img, 0, 0, width, height);
+    drawPhotoStamp(ctx, width, height, stampLines || []);
+
+    canvas.toBlob(function (blob) {
+      canvas.width = 1;
+      canvas.height = 1;
+      if (!blob) {
+        reject(new Error("Could not compress image."));
+        return;
+      }
+      resolve({ blob: blob, width: width, height: height });
+    }, "image/jpeg", quality);
+  });
+}
+
 function compressImageFile(file, stampLines) {
   return new Promise(function (resolve, reject) {
     if (!file || !file.type || file.type.indexOf("image/") !== 0) {
@@ -5078,34 +5137,14 @@ function compressImageFile(file, stampLines) {
     reader.onload = function (event) {
       var img = new Image();
       img.onload = function () {
-        var maxSide = 1600;
-        var width = img.width;
-        var height = img.height;
-
-        if (width > maxSide || height > maxSide) {
-          if (width > height) {
-            height = Math.round(height * (maxSide / width));
-            width = maxSide;
-          } else {
-            width = Math.round(width * (maxSide / height));
-            height = maxSide;
-          }
-        }
-
-        var canvas = document.createElement("canvas");
-        canvas.width = width;
-        canvas.height = height;
-        var ctx = canvas.getContext("2d");
-        ctx.drawImage(img, 0, 0, width, height);
-        drawPhotoStamp(ctx, width, height, stampLines || []);
-
-        canvas.toBlob(function (blob) {
-          if (!blob) {
-            reject(new Error("Could not compress image."));
-            return;
-          }
-          resolve(blob);
-        }, "image/jpeg", 0.82);
+        renderCompressedImage(img, EVIDENCE_IMAGE_MAX_SIDE, EVIDENCE_IMAGE_JPEG_QUALITY, stampLines)
+          .then(function (evidence) {
+            return renderCompressedImage(img, THUMBNAIL_IMAGE_MAX_SIDE, THUMBNAIL_IMAGE_JPEG_QUALITY, [])
+              .then(function (thumbnail) {
+                resolve({ evidence: evidence, thumbnail: thumbnail });
+              });
+          })
+          .catch(reject);
       };
       img.onerror = function () {
         reject(new Error("Could not read image."));
@@ -5133,36 +5172,76 @@ function uploadPhotoFile(file, widget, grid) {
     button.textContent = "Uploading...";
   }
 
-  var compressedBlob = null;
   var uploadedAt = new Date().toISOString();
   var stampLines = buildPhotoStampLines(area, uploadedAt);
+  var evidenceRef = null;
+  var thumbnailRef = null;
 
   return compressImageFile(file, stampLines)
-    .then(function (blob) {
-      compressedBlob = blob;
-      var fileName = Date.now() + "-" + Math.floor(Math.random() * 100000) + "-" + safeStorageName(file.name || "photo") + ".jpg";
-      var path = "users/" + firebaseUser.uid + "/inspections/" + currentInspectionId + "/" + safeStorageName(area) + "/" + fileName;
-      var ref = firebaseStorage.ref().child(path);
-      return ref.put(compressedBlob, {
+    .then(function (images) {
+      var originalBase = String(file.name || "photo").replace(/\.[^.]+$/, "");
+      var fileName = Date.now() + "-" + Math.floor(Math.random() * 100000) + "-" + safeStorageName(originalBase) + ".jpg";
+      var areaPath = "users/" + firebaseUser.uid + "/inspections/" + currentInspectionId + "/" + safeStorageName(area);
+      var path = areaPath + "/" + fileName;
+      var thumbnailPath = areaPath + "/thumbnails/" + fileName;
+
+      evidenceRef = firebaseStorage.ref().child(path);
+      thumbnailRef = firebaseStorage.ref().child(thumbnailPath);
+
+      var commonMetadata = {
+        originalName: file.name || "",
+        area: area,
+        stampedAt: uploadedAt,
+        stampText: stampLines.join(" | "),
+        compressionVersion: "2"
+      };
+
+      var evidenceUpload = evidenceRef.put(images.evidence.blob, {
         contentType: "image/jpeg",
-        customMetadata: {
-          originalName: file.name || "",
-          area: area,
-          stampedAt: uploadedAt,
-          stampText: stampLines.join(" | ")
-        }
-      }).then(function (snapshot) {
-        return snapshot.ref.getDownloadURL().then(function (url) {
+        customMetadata: Object.assign({}, commonMetadata, {
+          variant: "evidence",
+          maxSide: String(EVIDENCE_IMAGE_MAX_SIDE),
+          quality: String(EVIDENCE_IMAGE_JPEG_QUALITY)
+        })
+      });
+
+      var thumbnailUpload = thumbnailRef.put(images.thumbnail.blob, {
+        contentType: "image/jpeg",
+        customMetadata: Object.assign({}, commonMetadata, {
+          variant: "thumbnail",
+          maxSide: String(THUMBNAIL_IMAGE_MAX_SIDE),
+          quality: String(THUMBNAIL_IMAGE_JPEG_QUALITY)
+        })
+      });
+
+      return Promise.all([evidenceUpload, thumbnailUpload]).then(function (snapshots) {
+        return Promise.all([
+          snapshots[0].ref.getDownloadURL(),
+          snapshots[1].ref.getDownloadURL()
+        ]).then(function (urls) {
           return {
-            url: url,
+            url: urls[0],
             path: path,
+            thumbnailUrl: urls[1],
+            thumbnailPath: thumbnailPath,
             area: area,
             name: file.name || fileName,
-            size: compressedBlob ? compressedBlob.size : 0,
+            size: images.evidence.blob.size || 0,
+            thumbnailSize: images.thumbnail.blob.size || 0,
+            width: images.evidence.width,
+            height: images.evidence.height,
+            thumbnailWidth: images.thumbnail.width,
+            thumbnailHeight: images.thumbnail.height,
             uploadedAt: uploadedAt,
+            compressionVersion: 2,
             stamped: true
           };
         });
+      }).catch(function (error) {
+        var cleanups = [];
+        if (evidenceRef) cleanups.push(evidenceRef.delete().catch(function () {}));
+        if (thumbnailRef) cleanups.push(thumbnailRef.delete().catch(function () {}));
+        return Promise.all(cleanups).then(function () { throw error; });
       });
     })
     .then(function (photo) {
@@ -5181,13 +5260,21 @@ function uploadPhotoFile(file, widget, grid) {
     });
 }
 
-function deletePhotoFromStorage(photo) {
-  photo = normalizePhotoRecord(photo);
-  if (!photo || !photo.path || !firebaseStorage) return Promise.resolve();
-
-  return firebaseStorage.ref().child(photo.path).delete().catch(function (error) {
+function deleteStoragePath(path) {
+  if (!path || !firebaseStorage) return Promise.resolve();
+  return firebaseStorage.ref().child(path).delete().catch(function (error) {
     console.warn("Could not delete photo from Storage", error);
   });
+}
+
+function deletePhotoFromStorage(photo) {
+  photo = normalizePhotoRecord(photo);
+  if (!photo || !firebaseStorage) return Promise.resolve();
+
+  var paths = [photo.path, photo.thumbnailPath].filter(function (path, index, arr) {
+    return path && arr.indexOf(path) === index;
+  });
+  return Promise.all(paths.map(deleteStoragePath));
 }
 
 function collectPhotoPaths(data) {
@@ -5195,7 +5282,9 @@ function collectPhotoPaths(data) {
 
   function addPhoto(photo) {
     photo = normalizePhotoRecord(photo);
-    if (photo && photo.path) paths.push(photo.path);
+    if (!photo) return;
+    if (photo.path) paths.push(photo.path);
+    if (photo.thumbnailPath) paths.push(photo.thumbnailPath);
   }
 
   Object.keys(data && data.photos || {}).forEach(function (area) {
@@ -5230,7 +5319,7 @@ function collectPhotoPaths(data) {
 
 function deletePhotoPathsFromStorage(paths) {
   (paths || []).forEach(function (path) {
-    deletePhotoFromStorage({ path: path });
+    deleteStoragePath(path);
   });
 }
 
@@ -5286,8 +5375,10 @@ function addPhotoToGrid(grid, photoInput) {
   box.dataset.photo = JSON.stringify(photo);
 
   var img = document.createElement("img");
-  img.src = photo.url;
+  img.src = photo.thumbnailUrl || photo.url;
   img.alt = "inspection photo";
+  img.loading = "lazy";
+  img.decoding = "async";
 
   var remove = document.createElement("button");
   remove.className = "remove-photo";
