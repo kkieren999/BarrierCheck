@@ -238,7 +238,7 @@
     if (oldCompact) oldCompact.remove();
     var old = document.getElementById("customerReportV2Root");
     if (old) old.remove();
-    if (typeof window.refreshSummary === "function") window.refreshSummary();
+    if (typeof window.refreshSummary === "function") window.refreshSummary(true);
 
     var findings = typeof window.collectFindings === "function" ? window.collectFindings() : [];
     var photos = buildPhotoRegistry();
