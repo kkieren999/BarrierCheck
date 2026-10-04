@@ -50,6 +50,8 @@ var cloudInspections = [];
 var cloudUnsubscribe = null;
 var cloudSaveTimer = null;
 var cloudSavePendingData = null;
+var currentInspectionSaveTimer = null;
+var inspectionListDirty = true;
 var authUiReady = false;
 var currentUserProfile = {};
 var inspectorProfile = null;
@@ -347,6 +349,26 @@ function queueCloudSave(data, showAlert) {
     cloudSavePendingData = null;
   }, 800);
 }
+
+function scheduleCurrentInspectionSave(delay) {
+  if (!inspectionStarted) return;
+  clearTimeout(currentInspectionSaveTimer);
+  var wait = typeof delay === "number" && isFinite(delay) ? Math.max(0, delay) : 400;
+  currentInspectionSaveTimer = setTimeout(function () {
+    currentInspectionSaveTimer = null;
+    saveCurrentInspection(false);
+  }, wait);
+}
+
+function flushCurrentInspectionSave() {
+  if (!currentInspectionSaveTimer) return;
+  clearTimeout(currentInspectionSaveTimer);
+  currentInspectionSaveTimer = null;
+  if (inspectionStarted) saveCurrentInspection(false);
+}
+
+window.scheduleCurrentInspectionSave = scheduleCurrentInspectionSave;
+window.flushCurrentInspectionSave = flushCurrentInspectionSave;
 
 function generateId() {
   return "inspection-" + Date.now() + "-" + Math.floor(Math.random() * 100000);
@@ -1122,6 +1144,10 @@ function updateWorkflowBodyClasses(tabName) {
 }
 
 function showTab(tabName) {
+  if ((tabName === "home" || tabName === "summary") && currentInspectionSaveTimer) {
+    flushCurrentInspectionSave();
+  }
+
   currentTab = tabName;
 
   qsa(".page").forEach(function (page) {
@@ -1132,8 +1158,10 @@ function showTab(tabName) {
     tab.classList.toggle("active", getTabName(tab) === tabName);
   });
 
-  if (tabName === "summary") {
-    refreshSummary();
+  if (tabName === "home") {
+    renderInspectionList();
+  } else if (tabName === "summary") {
+    refreshSummary(true);
   }
 
   updateWorkflowBodyClasses(tabName);
@@ -1360,9 +1388,8 @@ function saveCurrentInspection(showAlert) {
   }
 
   setInspections(inspections);
+  inspectionListDirty = true;
   queueCloudSave(data, showAlert);
-  renderInspectionList();
-  refreshSummary();
 }
 
 
@@ -1553,6 +1580,7 @@ function renderInspectionList() {
   var empty = qs("#emptyState");
   if (!list) return;
 
+  inspectionListDirty = false;
   var inspections = getInspections();
 
   inspections.sort(function (a, b) {
@@ -4256,7 +4284,7 @@ function startDownloadInspection(id) {
 
   if (!loadInspectionIntoForm(data)) return;
 
-  refreshSummary();
+  refreshSummary(true);
   showTab("home");
   enterDownloadMode();
 }
@@ -5470,7 +5498,9 @@ function renderSummaryPage() {
   }
 }
 
-function refreshSummary() {
+function refreshSummary(force) {
+  if (!force && currentTab !== "summary" && !downloadModeActive) return;
+
   markFailures();
   updateRequiredFieldMarkers();
   updateComplianceUI();
@@ -5550,19 +5580,34 @@ function addCardToSummary(card, fallbackTitle, locationSelector) {
   }
 }
 
+function updateChangedFieldUi(el) {
+  if (!el) return;
+  if (typeof markRequiredElement === "function") markRequiredElement(el);
+
+  var container = getComplianceContainer(el);
+  if (!container) return;
+
+  container.classList.remove("compliance-pass", "compliance-fail", "compliance-na");
+  var result = evaluateComplianceForElement(el);
+  if (!result) return;
+  container.classList.toggle("compliance-pass", result.status === "pass");
+  container.classList.toggle("compliance-fail", result.status === "fail");
+  container.classList.toggle("compliance-na", result.status === "na");
+}
+
 function bindSaveEvents(root) {
   var scope = root || document;
   scope.querySelectorAll("[data-save]").forEach(function (el) {
     el.addEventListener("input", function () {
       if (currentTab !== "home") inspectionStarted = true;
-      refreshSummary();
-      saveCurrentInspection(false);
+      updateChangedFieldUi(el);
+      scheduleCurrentInspectionSave(450);
     });
 
     el.addEventListener("change", function () {
       if (currentTab !== "home") inspectionStarted = true;
-      refreshSummary();
-      saveCurrentInspection(false);
+      updateChangedFieldUi(el);
+      scheduleCurrentInspectionSave(250);
     });
   });
 }
@@ -5890,15 +5935,17 @@ function listenToCloudInspections() {
         return data;
       });
       firebaseDataLoaded = true;
+      inspectionListDirty = true;
       updateAuthUI();
-      renderInspectionList();
+      if (currentTab === "home") renderInspectionList();
     }, function (error) {
       console.error(error);
       firebaseDataLoaded = true;
       setFirebaseStatus("Could not load online inspections. Check Firestore rules.", true);
       alert("Could not load online inspections: " + error.message);
+      inspectionListDirty = true;
       updateAuthUI();
-      renderInspectionList();
+      if (currentTab === "home") renderInspectionList();
     });
 }
 
@@ -6061,9 +6108,12 @@ function init() {
   qsa(".photo-widget").forEach(bindPhotoWidget);
   initFirebase();
 
-  renderInspectionList();
+  document.addEventListener("visibilitychange", function () {
+    if (document.visibilityState === "hidden") flushCurrentInspectionSave();
+  });
+  window.addEventListener("pagehide", flushCurrentInspectionSave);
+
   showTab("home");
-  refreshSummary();
 }
 
 
