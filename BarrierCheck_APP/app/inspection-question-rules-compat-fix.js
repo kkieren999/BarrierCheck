@@ -217,7 +217,7 @@
     refreshTimer = window.setTimeout(function () {
       refreshTimer = null;
       refreshSafeguards();
-    }, 0);
+    }, 60);
   }
 
   function boot() {
