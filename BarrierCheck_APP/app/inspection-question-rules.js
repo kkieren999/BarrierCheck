@@ -103,7 +103,7 @@
     syncTimer = setTimeout(function () {
       syncTimer = null;
       syncAll();
-    }, 0);
+    }, 60);
   }
 
   function injectStyles() {
