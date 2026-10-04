@@ -90,10 +90,18 @@
       var caption = contextualTitle(context, area);
       Array.prototype.slice.call(widget.querySelectorAll(".photo-box")).forEach(function (box) {
         var img = box.querySelector("img");
-        if (!img || !img.src) return;
+        var fullSrc = "";
+        if (box.dataset && box.dataset.photo) {
+          try {
+            var record = JSON.parse(box.dataset.photo);
+            fullSrc = clean(record && (record.url || record.src));
+          } catch (error) {}
+        }
+        if (!fullSrc && img && img.src) fullSrc = img.src;
+        if (!fullSrc) return;
         counts[prefix] = (counts[prefix] || 0) + 1;
         var code = prefix + "-" + String(counts[prefix]).padStart(2, "0");
-        photos.push({ code: code, area: area, src: img.src, caption: caption });
+        photos.push({ code: code, area: area, src: fullSrc, caption: caption });
       });
     });
     return photos;
