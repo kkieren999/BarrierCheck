@@ -5139,7 +5139,7 @@ function compressImageFile(file, stampLines) {
       img.onload = function () {
         renderCompressedImage(img, EVIDENCE_IMAGE_MAX_SIDE, EVIDENCE_IMAGE_JPEG_QUALITY, stampLines)
           .then(function (evidence) {
-            return renderCompressedImage(img, THUMBNAIL_IMAGE_MAX_SIDE, THUMBNAIL_IMAGE_JPEG_QUALITY, stampLines)
+            return renderCompressedImage(img, THUMBNAIL_IMAGE_MAX_SIDE, THUMBNAIL_IMAGE_JPEG_QUALITY, [])
               .then(function (thumbnail) {
                 resolve({ evidence: evidence, thumbnail: thumbnail });
               });
