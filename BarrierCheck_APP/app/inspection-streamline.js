@@ -186,12 +186,26 @@
 
   function scheduleSave() {
     writeLayoutField();
+    if (typeof window.scheduleCurrentInspectionSave === "function") {
+      window.scheduleCurrentInspectionSave(300);
+      return;
+    }
     clearTimeout(layoutSaveTimer);
     layoutSaveTimer = setTimeout(function () {
       if (window.inspectionStarted && typeof window.saveCurrentInspection === "function") {
         window.saveCurrentInspection(false);
       }
-    }, 180);
+    }, 300);
+  }
+
+  function notifyLayoutChanged() {
+    try {
+      document.dispatchEvent(new CustomEvent("barriercheck:layout-changed"));
+    } catch (error) {
+      if (typeof window.BarrierCheckQuestionRulesSync === "function") {
+        window.BarrierCheckQuestionRulesSync();
+      }
+    }
   }
 
   function injectStyles() {
@@ -764,6 +778,7 @@
     syncNczCards();
     syncGateCards(!!destructive);
     writeLayoutField();
+    notifyLayoutChanged();
   }
 
   function initialiseLayoutFromForm() {
@@ -849,9 +864,11 @@
           layoutState.gates.push({ id: uid("gate"), location: "", customName: "" });
           renderLayoutEditors();
           syncGateCards(false);
+          notifyLayoutChanged();
           scheduleSave();
         } else if (layoutState && !syncingGateCards) {
           syncGateCards(false);
+          notifyLayoutChanged();
         }
         return result;
       };
@@ -869,6 +886,11 @@
     var addFenceButton = document.getElementById("addFenceSectionBtn");
     if (addFenceButton) addFenceButton.classList.add("streamline-hidden");
   }
+
+  window.BarrierCheckInitialiseLayoutFromForm = function () {
+    layoutState = null;
+    initialiseLayoutFromForm();
+  };
 
   // Replace the dynamic templates before core init binds the UI.
   window.fenceTemplate = fenceTemplate;
