@@ -5179,7 +5179,7 @@ function uploadPhotoFile(file, widget, grid) {
 
   return compressImageFile(file, stampLines)
     .then(function (images) {
-      var originalBase = String(file.name || "photo").replace(/.[^.]+$/, "");
+      var originalBase = String(file.name || "photo").replace(/\.[^.]+$/, "");
       var fileName = Date.now() + "-" + Math.floor(Math.random() * 100000) + "-" + safeStorageName(originalBase) + ".jpg";
       var areaPath = "users/" + firebaseUser.uid + "/inspections/" + currentInspectionId + "/" + safeStorageName(area);
       var path = areaPath + "/" + fileName;
