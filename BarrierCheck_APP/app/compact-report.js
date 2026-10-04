@@ -132,13 +132,21 @@
 
       boxes.forEach(function (box) {
         var img = box.querySelector("img");
-        if (!img || !img.src) return;
+        var fullSrc = "";
+        if (box.dataset && box.dataset.photo) {
+          try {
+            var record = JSON.parse(box.dataset.photo);
+            fullSrc = clean(record && (record.url || record.src));
+          } catch (error) {}
+        }
+        if (!fullSrc && img && img.src) fullSrc = img.src;
+        if (!fullSrc) return;
         prefixCounts[prefix] = (prefixCounts[prefix] || 0) + 1;
         var code = prefix + "-" + String(prefixCounts[prefix]).padStart(2, "0");
         var timestamp = box.querySelector(".timestamp");
         var caption = title;
         if (timestamp && clean(timestamp.textContent)) caption += " — " + clean(timestamp.textContent);
-        photos.push({ code: code, area: area, src: img.src, caption: caption });
+        photos.push({ code: code, area: area, src: fullSrc, caption: caption });
         codes.push(code);
       });
       if (codes.length) byWidget.set(widget, codes);
