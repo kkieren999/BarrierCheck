@@ -696,7 +696,6 @@
     qsa(".temporary-fence-card").forEach(function (card) {
       var present = value("temporaryFencingPresent", card);
       var buildingWork = value("buildingWorkAffectingBarrier", card);
-      var approval = value("temporaryFenceApprovalStatus", card);
       if (buildingWork === "Fail") {
         result.push(decision("engine-building-work-barrier", "fail", "Temporary fencing", itemTitle(card, "Temporary fencing / building work"), "Building work does not compromise barrier", { buildingWorkAssessment: buildingWork }, "Building work must not remove, alter or create access through the pool barrier without the required compliant controls.", "Building work is recorded as compromising the barrier.", "Install/maintain any required temporary barrier controls and reinstate or rectify the permanent barrier before certification.", "QDC MP 3.4 Schedule 1 modifications 3-4; Queensland PSI Guideline 2024 - Temporary fencing / building work", card));
       }
