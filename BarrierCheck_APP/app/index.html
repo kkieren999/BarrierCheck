@@ -17,6 +17,7 @@
 <script defer src="./address-autocomplete-layout-fix.js?v=20260922main1"></script>
 <script defer src="./inspection-question-rules.js?v=20261005perf1"></script>
 <script defer src="./inspection-question-rules-compat-fix.js?v=20261005perf1"></script>
+<script defer src="./compliance-engine.js?v=20261005compliance3"></script>
 <script defer src="./rectification-library.js?v=20260922main1"></script>
 <script defer src="./report-logic-bank.js?v=20261005logic1"></script>
 <script defer src="./customer-report-v2.js?v=20261005report5"></script>
@@ -179,6 +180,15 @@
 </select>
 </label>
 <label class="field">
+<span>Pool Environment</span>
+<select data-save="" name="poolEnvironment">
+<option value="">Select indoor / outdoor</option>
+<option>Outdoor</option>
+<option>Indoor</option>
+</select>
+<small class="helper-text">Used for building-door and window access decisions. This is separate from pool construction type.</small>
+</label>
+<label class="field">
 <span>Shared Pool?</span>
 <select data-save="" name="sharedPool">
 <option>No</option>
@@ -322,6 +332,18 @@
 <input data-save="" name="previousNonconformityChecked" type="checkbox"/>
 <i></i>
 </label>
+</div>
+<div class="details-group numbered-group bc-compliance-authority">
+<div class="group-title-row"><span class="group-number">A</span><h3>Special authority / alternative compliance record</h3></div>
+<p class="helper-text">Complete this only where an exemption, registered performance solution, variation or other formal authority may change how the standard applies. The compliance engine will not rely on an authority unless it is recorded as confirmed current with a reference.</p>
+<div class="form-grid">
+<label class="field"><span>Authority type</span><select data-save="" name="specialAuthorityType"><option>None / not applicable</option><option>Disability exemption</option><option>Impracticality exemption</option><option>Performance solution</option><option>Variation</option><option>Other</option></select></label>
+<label class="field"><span>Status</span><select data-save="" name="specialAuthorityStatus"><option>Not applicable</option><option>Confirmed current</option><option>Provided - not verified</option><option>Expired / not current</option></select></label>
+<label class="field"><span>Reference / decision number</span><input data-save="" name="specialAuthorityReference" type="text" placeholder="Council / QBCC / approval reference" /></label>
+<label class="field"><span>Issuing authority / certifier</span><input data-save="" name="specialAuthorityAuthority" type="text" placeholder="Authority or certifier" /></label>
+<label class="field full"><span>Scope - what requirement(s) this changes</span><textarea data-save="" name="specialAuthorityScope" placeholder="Record the exact barrier element and requirement affected by the authority..."></textarea></label>
+<label class="field full"><span>Conditions / limitations</span><textarea data-save="" name="specialAuthorityConditions" placeholder="Record conditions, expiry, occupancy limitations or other constraints..."></textarea></label>
+</div>
 </div>
 <label class="field full notes-field">
 <span>Pre-inspection Notes</span>
@@ -1184,6 +1206,15 @@
 <option>N/A</option>
 </select>
 </label>
+<label class="field"><span>Certificate issued date</span><input data-save="" name="certificateIssuedDate" type="date" /></label>
+<label class="field"><span>Nonconformity notice issued date</span><input data-save="" name="nonconformityNoticeIssuedDate" type="date" /></label>
+<label class="field"><span>Nonconformity notice reference</span><input data-save="" name="nonconformityNoticeReference" type="text" placeholder="Notice / file reference" /></label>
+<label class="field"><span>Minor-repair agreement</span><select data-save="" name="minorRepairAgreement"><option value="">Select</option><option>No</option><option>Yes</option><option>N/A</option></select></label>
+<label class="field"><span>Minor-repair agreement due date</span><input data-save="" name="minorRepairAgreementDueDate" type="date" /></label>
+<label class="field"><span>Reinspection due date</span><input data-save="" name="reinspectionDueDate" type="date" /></label>
+<label class="field"><span>Reinspection requested date</span><input data-save="" name="reinspectionRequestedDate" type="date" /></label>
+<label class="field"><span>Reinspection completed date</span><input data-save="" name="reinspectionCompletedDate" type="date" /></label>
+<label class="field"><span>Local government notified date</span><input data-save="" name="localGovernmentNotifiedDate" type="date" /></label>
 <label class="field full">
 <span>Final Notes</span>
 <textarea data-save="" name="finalInspectionNotes" placeholder="Final inspection notes, outcome, required actions, reinspection details or certificate/nonconformity information..."></textarea>
