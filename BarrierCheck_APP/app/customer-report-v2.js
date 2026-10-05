@@ -290,7 +290,7 @@
     return groups;
   }
 
-  function ruleDetails(finding) {  function ruleDetails(finding) {
+  function ruleDetails(finding) {
     var lib = library();
     var rule = lib.rules && lib.rules[finding.id] ? lib.rules[finding.id] : null;
     return {
@@ -464,7 +464,7 @@
     if (typeof window.refreshSummary === "function") window.refreshSummary(true);
 
     var allFindings = typeof window.collectFindings === "function" ? window.collectFindings() : [];
-    var findings = suppressDuplicateClientFindings(filterClientFindings(allFindings));
+    var findings = filterClientFindings(allFindings);
     var groups = groupClientFindings(findings);
     var photos = buildPhotoRegistry();
     var findingsHtml = renderFindings(groups, photos);
