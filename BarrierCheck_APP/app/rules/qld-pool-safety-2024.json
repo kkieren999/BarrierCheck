@@ -1581,46 +1581,6 @@
       "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
     },
     {
-      "id": "safety-certificatereadytoissue",
-      "field": "certificateReadyToIssue",
-      "type": "select_values",
-      "triggerValues": [
-        "Fail"
-      ],
-      "passValues": [
-        "Pass"
-      ],
-      "naValues": [
-        "N/A"
-      ],
-      "itemType": "Safety / Outcome",
-      "requirement": "Pool safety certificate ready to issue should be compliant or not applicable.",
-      "issueTemplate": "{label} for {item} was recorded as Fail.",
-      "riskTemplate": "A certificate should not be issued if unresolved compliance items remain.",
-      "recommendationTemplate": "Resolve all outstanding compliance items before issuing a pool safety certificate.",
-      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
-    },
-    {
-      "id": "safety-owneradvisedactions",
-      "field": "ownerAdvisedActions",
-      "type": "select_values",
-      "triggerValues": [
-        "Fail"
-      ],
-      "passValues": [
-        "Pass"
-      ],
-      "naValues": [
-        "N/A"
-      ],
-      "itemType": "Safety / Outcome",
-      "requirement": "Owner advised of required actions should be compliant or not applicable.",
-      "issueTemplate": "{label} for {item} was recorded as Fail.",
-      "riskTemplate": "The owner/occupier should be advised of required rectification actions.",
-      "recommendationTemplate": "Provide clear written advice to the owner/occupier about the required actions and reinspection pathway.",
-      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
-    },
-    {
       "id": "site-hazards-observed",
       "field": "siteHazardsNoted",
       "type": "select_values",
