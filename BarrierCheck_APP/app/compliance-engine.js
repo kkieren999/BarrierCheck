@@ -130,7 +130,13 @@
       fieldBlock("Object / vegetation can support a young child", yesNoSelect("nczObjectSupportsChild"),
         "Useful for vegetation or features that may be present but are not practically climbable.", false) +
       fieldBlock("900mm NCZ extension beyond fence end / intersection compliant", yesNoSelect("nczEndExtensionCompliant"),
-        "Record where an outside NCZ reaches a fence end, corner, intersection or another barrier/object.", false)
+        "Record where an outside NCZ reaches a fence end, corner, intersection or another barrier/object.", false) +
+      fieldBlock("Additional clear-area width (mm)",
+        '<input data-save name="additionalClearAreaWidth" type="number" placeholder="300">', "", false) +
+      fieldBlock("Inside-NCZ intersection present", yesNoSelect("nczInsideIntersectionPresent"),
+        "Relevant to barriers 1800mm or higher where the NCZ is on the inside.", false) +
+      fieldBlock("Intersecting top surface width (mm)",
+        '<input data-save name="nczIntersectionTopSurfaceWidth" type="number" placeholder="50">', "", false)
     );
   }
 
