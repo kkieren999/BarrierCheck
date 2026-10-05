@@ -14,6 +14,7 @@
   var priorRestoreFields = window.restoreFields;
   var priorClearFormForNewInspection = window.clearFormForNewInspection;
   var priorSaveCurrentInspection = window.saveCurrentInspection;
+  var priorGatherInspectionData = window.gatherInspectionData;
 
   var OBSOLETE_ATOMIC_IDS = {
     "boundary-height-1800": true,
@@ -917,6 +918,18 @@
         renderAuthorityRecords();
         window.setTimeout(updateEngine, 0);
         return result;
+      };
+    }
+    if (typeof priorGatherInspectionData === "function") {
+      window.gatherInspectionData = function () {
+        updateEngine();
+        var data = priorGatherInspectionData.apply(this, arguments);
+        var snapshotField = qs('[name="complianceDecisionSnapshot"]');
+        if (snapshotField && clean(snapshotField.value)) {
+          try { data.complianceAudit = JSON.parse(snapshotField.value); } catch (error) {}
+        }
+        data.complianceEngineVersion = VERSION;
+        return data;
       };
     }
     if (typeof priorSaveCurrentInspection === "function") {
