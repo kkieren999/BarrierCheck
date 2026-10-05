@@ -1926,7 +1926,7 @@ function inspectionHasMeaningfulData(data) {
 }
 
 var REQUIRED_STATIC_FIELDS = [
-  "inspectionDate",
+  "poolEnvironment", "inspectionDate",
   "inspectorName",
   "ownerName",
   "propertyAddress",
@@ -4456,6 +4456,8 @@ function fenceTemplate(number) {
         '<label class="field"><span>Ground clearance (mm)</span><input data-save name="fenceGroundClearance" type="number" placeholder="100" /></label>' +
         '<label class="field"><span>Openings / gaps compliant</span><select data-save name="fenceGaps"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
         '<label class="field"><span>Mesh / perforated aperture size (mm)</span><input data-save name="fenceApertureSize" type="number" placeholder="If applicable" /></label>' +
+        '<label class="field"><span>Mesh top strainer wire / rail</span><select data-save name="fenceMeshTopStrainer"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
+        '<label class="field"><span>Mesh bottom strainer wire / rail</span><select data-save name="fenceMeshBottomStrainer"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
       '</div>' +
     '</div>' +
     '<div class="details-group numbered-group">' +
@@ -4465,6 +4467,10 @@ function fenceTemplate(number) {
         '<label class="field"><span>Projections / indentations compliant</span><select data-save name="fenceProjectionsCompliant"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
         '<label class="field"><span>Strength / rigidity acceptable</span><select data-save name="fenceStrengthRigid"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
         '<label class="field"><span>Posts / footings / fixings secure</span><select data-save name="fenceFixingsSecure"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
+        '<label class="field"><span>High-barrier / cranked-top NCZ arrangement</span><select data-save name="fenceHighBarrierArrangement"><option value=""></option><option>None</option><option>2400mm or more qualifying fence</option><option>1800mm or more with compliant cranked top</option></select></label>' +
+        '<label class="field"><span>High-barrier arrangement compliant</span><select data-save name="fenceHighBarrierArrangementCompliant"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
+        '<label class="field"><span>Strength / rigidity assessment method</span><select data-save name="fenceStrengthAssessmentMethod"><option value=""></option><option>Visual inspection</option><option>Manual squeeze assessment</option><option>Formal test / test report</option><option>Engineering / manufacturer evidence</option><option>Other</option></select></label>' +
+        '<label class="field"><span>Strength evidence / test reference</span><input data-save name="fenceStrengthEvidenceReference" type="text" placeholder="Optional test report, panel type or evidence reference" /></label>' +
         '<label class="field full"><span>Comments / Recommendation</span><textarea data-save name="fenceComments" placeholder="Notes, measurements, non-compliance details or recommendation..."></textarea></label>' +
       '</div>' +
     '</div>' +
@@ -4534,6 +4540,9 @@ function climbabilityTemplate(number) {
       '<label class="field"><span>Object Type</span><select data-save name="nczObjectType"><option value=""></option><option>Tree / vegetation</option><option>Pot plant</option><option>Furniture</option><option>Pool equipment</option><option>Retaining wall</option><option>Tap / power outlet</option><option>Step / ledge</option><option>Other</option></select></label>' +
       '<label class="field"><span>Distance From Barrier (mm)</span><input data-save name="nczDistance" type="number" placeholder="900" /></label>' +
       '<label class="field"><span>Horizontal surface over 10mm?</span><select data-save name="nczHorizontalSurface"><option value=""></option><option>Yes</option><option>No</option><option>N/A</option></select></label>' +
+      '<label class="field"><span>Object is climbable by a young child</span><select data-save name="nczObjectClimbable"><option value=""></option><option>Yes</option><option>No</option><option>Uncertain</option></select></label>' +
+      '<label class="field"><span>Object is in upper 900mm quadrant</span><select data-save name="nczObjectInUpperQuadrant"><option value=""></option><option>Yes</option><option>No</option><option>N/A</option></select></label>' +
+      '<label class="field"><span>Young child can reasonably access object</span><select data-save name="nczYoungChildCanAccess"><option value=""></option><option>Yes</option><option>No</option><option>Uncertain</option><option>N/A</option></select></label>' +
       '<label class="field"><span>NCZ Compliant</span><select data-save name="nczCompliant"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
       '<label class="field full"><span>Comments / Recommendation</span><textarea data-save name="nczComments" placeholder="Notes, non-compliance details or recommendation..."></textarea></label>' +
     '</div>' +
@@ -4666,6 +4675,11 @@ function balconyTemplate(number) {
       '<label class="field full"><span>Location</span><input data-save name="balconyLocation" type="text" placeholder="e.g. Balcony overlooking pool area" /></label>' +
       '<label class="field"><span>Balcony / Deck Type</span><select data-save name="balconyType"><option value=""></option><option>Balcony</option><option>Deck</option><option>Raised platform</option><option>Stairs / landing</option><option>Other</option></select></label>' +
       '<label class="field"><span>Height / drop assessed</span><select data-save name="balconyHeightAssessed"><option value=""></option><option>Yes</option><option>No</option><option>N/A</option></select></label>' +
+      '<label class="field"><span>Balcony floor to pool-area ground (mm)</span><input data-save name="balconyDropHeight" type="number" placeholder="1800" /></label>' +
+      '<label class="field"><span>Balcony perimeter to barrier top (mm)</span><input data-save name="balconyDistanceToBarrierTop" type="number" placeholder="900" /></label>' +
+      '<label class="field"><span>Protection method relied upon</span><select data-save name="balconyProtectionMethod"><option value=""></option><option>Compliant barrier to balcony</option><option>NCZ arrangement</option><option>Neither</option><option>N/A</option></select></label>' +
+      '<label class="field"><span>Balustrade / barrier compliant</span><select data-save name="balconyBalustradeCompliant"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
+      '<label class="field"><span>Balcony NCZ compliant</span><select data-save name="balconyNczCompliant"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
       '<label class="field"><span>Access to pool controlled</span><select data-save name="balconyAccessControlled"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
       '<label class="field"><span>Barrier compliant</span><select data-save name="balconyBarrierCompliant"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
       '<label class="field full"><span>Comments / Recommendation</span><textarea data-save name="balconyComments" placeholder="Notes about balcony, deck, raised platform or access issue..."></textarea></label>' +
@@ -4708,6 +4722,13 @@ function retainingWallTemplate(number) {
       '<label class="field"><span>Type</span><select data-save name="retainingWallType"><option value=""></option><option>Retaining wall</option><option>Level change</option><option>Steps</option><option>Raised garden bed</option><option>Sloping ground</option><option>Other</option></select></label>' +
       '<label class="field"><span>Height / level change (mm)</span><input data-save name="retainingWallHeight" type="number" placeholder="500" /></label>' +
       '<label class="field"><span>Distance from barrier (mm)</span><input data-save name="retainingWallDistance" type="number" placeholder="900" /></label>' +
+      '<label class="field"><span>Relative to pool level</span><select data-save name="retainingWallRelativeLevel"><option value=""></option><option>Above pool level</option><option>Below pool level</option><option>Other</option></select></label>' +
+      '<label class="field"><span>Slope from vertical (degrees)</span><input data-save name="retainingWallSlopeDegrees" type="number" step="0.1" placeholder="0" /></label>' +
+      '<label class="field"><span>No prohibited handholds / footholds</span><select data-save name="retainingWallNoFootholds"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
+      '<label class="field"><span>Exposed face / NCZ barrier compliant</span><select data-save name="retainingWallFaceBarrierCompliant"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
+      '<label class="field"><span>Fence intersects retaining wall</span><select data-save name="retainingWallFenceIntersection"><option value=""></option><option>Yes</option><option>No</option><option>N/A</option></select></label>' +
+      '<label class="field"><span>Intersection return / overhang (mm)</span><input data-save name="retainingWallReturnOverhang" type="number" placeholder="900" /></label>' +
+      '<label class="field"><span>Return / overhang surface non-climbable</span><select data-save name="retainingWallReturnSurfaceCompliant"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
       '<label class="field"><span>Compliant</span><select data-save name="retainingWallCompliant"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
       '<label class="field full"><span>Comments / Recommendation</span><textarea data-save name="retainingWallComments" placeholder="Notes about retaining wall, level change, step, raised bed or sloping ground..."></textarea></label>' +
     '</div>' +
@@ -4749,6 +4770,8 @@ function boundaryTemplate(number) {
       '<label class="field"><span>Boundary Side</span><select data-save name="boundarySide"><option value=""></option><option>Front boundary</option><option>Rear boundary</option><option>Left boundary</option><option>Right boundary</option><option>Neighbour side</option><option>Other</option></select></label>' +
       '<label class="field"><span>Fence Type</span><select data-save name="boundaryFenceType"><option value=""></option><option>Timber</option><option>Colorbond / metal</option><option>Masonry</option><option>Glass</option><option>Aluminium</option><option>Other</option></select></label>' +
       '<label class="field"><span>Height (mm)</span><input data-save name="boundaryFenceHeight" type="number" placeholder="1800" /></label>' +
+      '<label class="field"><span>NCZ side relied upon</span><select data-save name="boundaryNczSide"><option value=""></option><option>Outside pool area</option><option>Inside pool area</option><option>Both / requires assessment</option></select></label>' +
+      '<label class="field"><span>Additional clear area maintained where required</span><select data-save name="boundaryAdditionalClearAreaMaintained"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
       '<label class="field"><span>Neighbour-side issues assessed</span><select data-save name="boundaryNeighbourSideClear"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
       '<label class="field"><span>Compliant</span><select data-save name="boundaryCompliant"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
       '<label class="field full"><span>Comments / Recommendation</span><textarea data-save name="boundaryComments" placeholder="Notes about boundary fence or neighbour-side issue..."></textarea></label>' +
@@ -4790,7 +4813,8 @@ function specialPoolFeatureTemplate(number) {
       '<label class="field"><span>Pool wall used as barrier</span><select data-save name="poolWallUsedAsBarrier"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
       '<label class="field"><span>Pool wall height compliant</span><select data-save name="poolWallHeightCompliant"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
       '<label class="field"><span>Ladder / access point secured</span><select data-save name="ladderAccessSecured"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
-      '<label class="field"><span>Pump/filter creates climbable access</span><select data-save name="pumpFilterClimbableAccess"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
+      '<label class="field"><span>Designated access point enclosed by compliant barrier / gate</span><select data-save name="designatedPoolAccessPointCompliant"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
+      '<label class="field"><span>Pump/filter does not create climbable access</span><select data-save name="pumpFilterClimbableAccess"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
       '<label class="field"><span>Holding tank 300mm or deeper</span><select data-save name="holdingTank300mmOrDeeper"><option value=""></option><option>Yes</option><option>No</option><option>N/A</option></select></label>' +
       '<label class="field full"><span>Comments / Recommendation</span><textarea data-save name="specialPoolFeatureComments" placeholder="Notes about above-ground, inflatable, wet-edge, infinity or other special feature..."></textarea></label>' +
     '</div>' +
@@ -4812,8 +4836,12 @@ function waterBarrierTemplate(number) {
     '<div class="fence-card-head"><h3>Permanent Body of Water Check ' + number + '</h3><button class="remove-section-btn" type="button">Remove</button></div>' +
     '<div class="form-grid">' +
       '<label class="field full"><span>Location</span><input data-save name="waterBarrierLocation" type="text" placeholder="e.g. Canal edge / lake side" /></label>' +
-      '<label class="field"><span>Water body type</span><select data-save name="waterBarrierType"><option value=""></option><option>Canal</option><option>Lake</option><option>River</option><option>Permanent pond</option><option>Other</option></select></label>' +
-      '<label class="field"><span>Depth at pool-area edge (mm)</span><input data-save name="waterBarrierDepth" type="number" placeholder="300" /></label>' +
+      '<label class="field"><span>Water body type</span><select data-save name="waterBarrierType"><option value=""></option><option>Canal</option><option>Lake</option><option>River</option><option>Creek / stream</option><option>Pond</option><option>Ocean</option><option>Dam</option><option>Other</option></select></label>' +
+      '<label class="field"><span>Continuous depth in relevant area (mm)</span><input data-save name="waterBarrierDepth" type="number" placeholder="More than 300" /></label>' +
+      '<label class="field"><span>Width adjacent to protected pool-area edge (mm)</span><input data-save name="waterBarrierWidth" type="number" placeholder="1800" /></label>' +
+      '<label class="field"><span>No access over or under water body</span><select data-save name="waterBarrierAccessBlocked"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
+      '<label class="field"><span>Intersecting barrier return / overhang (mm)</span><input data-save name="waterBarrierReturnOverhang" type="number" placeholder="900" /></label>' +
+      '<label class="field"><span>Return / overhang free of climbable projections</span><select data-save name="waterBarrierReturnSurfaceCompliant"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
       '<label class="field"><span>Compliant as barrier</span><select data-save name="waterBarrierCompliant"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
       '<label class="field full"><span>Comments / Recommendation</span><textarea data-save name="waterBarrierComments" placeholder="Notes about permanent water body, access risks or recommendation..."></textarea></label>' +
     '</div>' +
@@ -4835,6 +4863,11 @@ function barrierWindowTemplate(number) {
     '<div class="fence-card-head"><h3>Window Check ' + number + '</h3><button class="remove-section-btn" type="button">Remove</button></div>' +
     '<div class="form-grid">' +
       '<label class="field full"><span>Window Location</span><input data-save name="barrierWindowLocation" type="text" placeholder="e.g. Bedroom window facing pool area" /></label>' +
+      '<label class="field"><span>External sill to pool area h1 (mm)</span><input data-save name="barrierWindowExternalSillHeight" type="number" placeholder="1800" /></label>' +
+      '<label class="field"><span>Internal floor to sill h2 (mm)</span><input data-save name="barrierWindowInternalSillHeight" type="number" placeholder="1200" /></label>' +
+      '<label class="field"><span>Child-resistant method relied upon</span><select data-save name="barrierWindowMethod"><option value=""></option><option>Bars / mesh</option><option>Restricted opening</option><option>Secure flyscreen</option><option>Sill-height arrangement only</option><option>Other</option></select></label>' +
+      '<label class="field"><span>Maximum opening (mm)</span><input data-save name="barrierWindowMaxOpening" type="number" placeholder="100 if restricted" /></label>' +
+      '<label class="field"><span>Opening / screen strength &amp; rigidity compliant</span><select data-save name="barrierWindowStrengthCompliant"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
       '<label class="field"><span>Opening restricted where required</span><select data-save name="barrierWindowOpeningRestricted"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
       '<label class="field"><span>Screen / bars / mesh fixed correctly</span><select data-save name="barrierWindowScreenBarsMeshFixed"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
       '<label class="field"><span>Fixings require tools to remove</span><select data-save name="barrierWindowFixingsRequireTools"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
@@ -4860,6 +4893,10 @@ function barrierDoorTemplate(number) {
     '<div class="form-grid">' +
       '<label class="field full"><span>Location</span><input data-save name="barrierDoorLocation" type="text" placeholder="e.g. Patio sliding door" /></label>' +
       '<label class="field"><span>Access Type</span><select data-save name="barrierDoorType"><option value=""></option><option>Door</option><option>Sliding door</option><option>Pet door</option><option>Building wall</option><option>Other</option></select></label>' +
+      '<label class="field"><span>Formal authority applies to this door arrangement</span><select data-save name="barrierDoorAuthorityApplies"><option value=""></option><option>No</option><option>Yes</option></select></label>' +
+      '<label class="field"><span>Opens away from pool</span><select data-save name="barrierDoorOpensAway"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
+      '<label class="field"><span>Latch release height inside building (mm)</span><input data-save name="barrierDoorLatchReleaseHeight" type="number" placeholder="1500" /></label>' +
+      '<label class="field"><span>No footholds &gt;10mm below 1000mm</span><select data-save name="barrierDoorNoFootholds"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
       '<label class="field"><span>Self-closing</span><select data-save name="barrierDoorSelfClosing"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
       '<label class="field"><span>Self-latching</span><select data-save name="barrierDoorSelfLatching"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
       '<label class="field"><span>Direct access controlled</span><select data-save name="barrierDoorCompliant"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
@@ -4885,9 +4922,13 @@ function temporaryFenceTemplate(number) {
     '<div class="form-grid">' +
       '<label class="field"><span>Temporary fencing present if required</span><select data-save name="temporaryFencingPresent"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
       '<label class="field"><span>Temporary fence appears secure</span><select data-save name="temporaryFenceSecure"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
-      '<label class="field"><span>Building work affecting barrier noted</span><select data-save name="buildingWorkAffectingBarrier"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
+      '<label class="field"><span>Building work does not compromise barrier</span><select data-save name="buildingWorkAffectingBarrier"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
       '<label class="field"><span>Barrier not removed or altered unsafely</span><select data-save name="barrierNotAlteredUnsafely"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
       '<label class="field"><span>Minor repairs / maintenance noted</span><select data-save name="minorRepairsMaintenanceNoted"><option value=""></option><option>Yes</option><option>No</option><option>N/A</option></select></label>' +
+      '<label class="field"><span>Temporary-fence approval / inspection date</span><input data-save name="temporaryFenceApprovalDate" type="date" /></label>' +
+      '<label class="field"><span>Temporary-fence approval expiry</span><input data-save name="temporaryFenceApprovalExpiry" type="date" /></label>' +
+      '<label class="field"><span>Approved / inspected by</span><input data-save name="temporaryFenceApprovedBy" type="text" placeholder="Building certifier / PSI as applicable" /></label>' +
+      '<label class="field"><span>Approval / notice reference</span><input data-save name="temporaryFenceApprovalReference" type="text" placeholder="Reference" /></label>' +
       '<label class="field full"><span>Comments / Recommendation</span><textarea data-save name="temporaryFencingComments" placeholder="Notes about temporary fencing, building work, repairs or maintenance..."></textarea></label>' +
     '</div>' +
     '<div class="photo-widget" data-photo-area="temporary-fencing-' + number + '"><button class="camera-btn" type="button">+ Evidence Photo</button><input type="file" accept="image/*" capture="environment" multiple hidden /><div class="photo-grid"></div></div>';
@@ -4903,6 +4944,8 @@ function decommissionedPoolTemplate(number) {
       '<label class="field"><span>Pool claimed decommissioned</span><select data-save name="poolClaimedDecommissioned"><option value=""></option><option>Yes</option><option>No</option><option>N/A</option></select></label>' +
       '<label class="field"><span>Cannot hold 300mm or more of water</span><select data-save name="cannotHold300mmWater"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
       '<label class="field"><span>Converted to fishpond / other use</span><select data-save name="convertedPoolUse"><option value=""></option><option>Yes</option><option>No</option><option>N/A</option></select></label>' +
+      '<label class="field"><span>Final approval confirms structure no longer a swimming pool</span><select data-save name="decommissioningFinalApprovalConfirmed"><option value=""></option><option>Yes</option><option>No</option><option>N/A</option></select></label>' +
+      '<label class="field"><span>Final approval / inspection reference</span><input data-save name="decommissioningFinalApprovalReference" type="text" placeholder="Building approval / final inspection reference" /></label>' +
       '<label class="field"><span>Register update required</span><select data-save name="registerUpdateRequired"><option value=""></option><option>Yes</option><option>No</option><option>N/A</option></select></label>' +
       '<label class="field full"><span>Comments / Recommendation</span><textarea data-save name="decommissionedPoolComments" placeholder="Notes about decommissioning, destruction, conversion or register update..."></textarea></label>' +
     '</div>' +
@@ -4937,7 +4980,9 @@ function gateTemplate(number) {
       '<div class="group-title-row"><span class="group-number">A</span><h3>Gate identity / location</h3></div>' +
       '<div class="form-grid">' +
         '<label class="field full"><span>Gate Location</span><input data-save name="gateLocation" type="text" placeholder="e.g. Side gate" /></label>' +
-        '<label class="field"><span>Gate Type</span><select data-save name="gateType"><option value=""></option><option>Single leaf gate</option><option>Double leaf gate</option><option>Glass gate</option><option>Aluminium gate</option><option>Timber gate</option><option>Mesh / chainwire gate</option><option>Other</option></select></label>' +
+        '<label class="field"><span>Gate Type</span><select data-save name="gateType"><option value=""></option><option>Single leaf gate</option><option>Double leaf gate</option><option>Glass gate</option><option>Aluminium gate</option><option>Timber gate</option><option>Mesh / chainwire gate</option><option>Chameleon gate</option><option>Other</option></select></label>' +
+        '<label class="field"><span>Inactive leaf permanently fixed / permanent central fixture</span><select data-save name="gateInactiveLeafPermanentlyFixed"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
+        '<label class="field"><span>Each operable leaf self-closes and self-latches</span><select data-save name="gateEachLeafSelfClosingLatching"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
       '</div>' +
     '</div>' +
     '<div class="details-group numbered-group">' +
@@ -4959,6 +5004,12 @@ function gateTemplate(number) {
         '<label class="field"><span>Gap under gate compliant</span><select data-save name="gateGapUnderCompliant"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
         '<label class="field"><span>Latch height (mm)</span><input data-save name="gateLatchHeight" type="number" placeholder="1500" /></label>' +
         '<label class="field"><span>Latch height compliant</span><select data-save name="gateLatchHeightCompliant"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
+        '<label class="field"><span>Latch release side</span><select data-save name="gateLatchReleaseSide"><option value=""></option><option>Inside / pool side</option><option>Outside / non-pool side</option><option>N/A</option></select></label>' +
+        '<label class="field"><span>Highest lower horizontal member height (mm)</span><input data-save name="gateHighestLowerHorizontalMemberHeight" type="number" placeholder="If lower latch arrangement" /></label>' +
+        '<label class="field"><span>Latch release below gate/hand-hole top edge (mm)</span><input data-save name="gateLatchBelowGateTop" type="number" placeholder="150" /></label>' +
+        '<label class="field"><span>Maximum shield opening (mm)</span><input data-save name="gateShieldMaxOpening" type="number" placeholder="10" /></label>' +
+        '<label class="field"><span>Effective shielding radius (mm)</span><input data-save name="gateShieldRadius" type="number" placeholder="450" /></label>' +
+        '<label class="field"><span>Hand-hole bottom height (mm)</span><input data-save name="gateHandHoleBottomHeight" type="number" placeholder="1200 if applicable" /></label>' +
         '<label class="field"><span>Latch shielded if required</span><select data-save name="gateLatchShielded"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
         '<label class="field"><span>Latch cannot be reached through gaps</span><select data-save name="gateLatchReachThroughGaps"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
         '<label class="field"><span>Hinges safe / not climbable</span><select data-save name="gateHingesSafe"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
