@@ -3,7 +3,7 @@
 (function () {
   "use strict";
 
-  var REPORT_VERSION = "20261005.5";
+  var REPORT_VERSION = "20261005.6";
   var priorCloseDownloadMode = window.closeDownloadMode;
   var CLIENT_REPORT_HIDDEN_FINDING_IDS = [
     "overall-result-fail",
@@ -152,6 +152,11 @@
     return (findings || []).filter(function (finding) {
       return CLIENT_REPORT_HIDDEN_FINDING_IDS.indexOf(finding && finding.id) === -1;
     });
+  }
+
+  function isSpecialistReferralFinding(finding) {
+    var id = clean(finding && finding.id).toLowerCase();
+    return ["observed-electricalissueobserved","observed-bondingconcernnoted","observed-possibleasbestosobserved","observed-firesafetyissueobserved","observed-referralrecommended"].indexOf(id) !== -1;
   }
 
   function sourcesText(rule, finding) {
