@@ -288,15 +288,37 @@
     return root;
   }
 
+  function waitForReportImages(root) {
+    var images = root ? Array.prototype.slice.call(root.querySelectorAll("img")) : [];
+    if (!images.length) return Promise.resolve();
+
+    return Promise.all(images.map(function (img) {
+      if (img.complete) return Promise.resolve();
+      return new Promise(function (resolve) {
+        var settled = false;
+        function done() {
+          if (settled) return;
+          settled = true;
+          resolve();
+        }
+        img.addEventListener("load", done, { once: true });
+        img.addEventListener("error", done, { once: true });
+        window.setTimeout(done, 5000);
+      });
+    }));
+  }
+
   window.enterDownloadMode = function () {
-    buildReport();
+    var reportRoot = buildReport();
     document.body.classList.remove("compact-report-mode");
     document.body.classList.add("download-mode", "customer-report-v2");
     if (typeof window.ensureDownloadCloseButton === "function") window.ensureDownloadCloseButton();
     var closeBtn = document.getElementById("downloadCloseBtn");
     if (closeBtn) closeBtn.hidden = false;
     window.scrollTo(0, 0);
-    window.setTimeout(function () { window.print(); }, 120);
+    waitForReportImages(reportRoot).then(function () {
+      window.setTimeout(function () { window.print(); }, 60);
+    });
   };
 
   window.closeDownloadMode = function () {
