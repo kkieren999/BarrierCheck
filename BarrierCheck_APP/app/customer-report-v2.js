@@ -3,7 +3,7 @@
 (function () {
   "use strict";
 
-  var REPORT_VERSION = "20261005.5";
+  var REPORT_VERSION = "20261005.6";
   var priorCloseDownloadMode = window.closeDownloadMode;
   var CLIENT_REPORT_HIDDEN_FINDING_IDS = [
     "overall-result-fail",
@@ -370,6 +370,7 @@
     var notes = uniqueStrings(details.map(function (detail) { return detail.finding.inspectorNotes; }));
 
     return '<article class="bc2-finding" data-report-group="' + esc(group.key) + '"' + (scenario ? ' data-report-scenario="' + esc(scenario.id) + '"' : '') + '>' +
+      '<button class="bc2-finding-remove" type="button" aria-label="Remove this item from report" title="Remove from report">×</button>' +
       '<div class="bc2-finding-head"><span>F' + String(index + 1).padStart(2, "0") + '</span><div><strong>' + esc(title) + '</strong>' + (subTitle ? '<small>' + esc(subTitle) + '</small>' : '') + '</div></div>' +
       '<div class="bc2-block"><b>What needs attention</b>' + problemHtml + '</div>' +
       '<div class="bc2-block"><b>Why this matters</b>' + (whyItems.length === 1 ? '<p>' + esc(whyItems[0]) + '</p>' : listHtml(whyItems)) + '</div>' +
@@ -383,11 +384,14 @@
   }
 
   function renderFindings(groups, photos) {
-    if (!groups.length) {
-      return '<section class="bc2-section"><h2>Inspection outcome</h2><div class="bc2-compliant"><strong>No non-compliance findings were generated from the recorded inspection.</strong><p>The detailed inspection record remains stored in BarrierCheck.</p></div></section>';
-    }
-    return '<section class="bc2-section"><h2>Items requiring attention</h2><p class="bc2-intro">Where recorded failures describe the same underlying condition, BarrierCheck combines them into one client-facing issue. Independent defects remain separate.</p>' +
-      groups.map(function (group, index) { return renderFindingGroup(group, index, photos); }).join("") +
+    var items = (groups || []).map(function (group, index) {
+      return renderFindingGroup(group, index, photos);
+    }).join("");
+    return '<section class="bc2-section bc2-findings-section"><h2>Items requiring attention</h2>' +
+      '<p class="bc2-intro">Where recorded failures describe the same underlying condition, BarrierCheck combines them into one client-facing issue. Independent defects remain separate. You can edit, remove or add report-only items before printing.</p>' +
+      '<p class="bc2-findings-empty"' + (groups.length ? ' hidden' : '') + '>No generated items are currently shown. Use the button below if you need to add a client-facing item manually.</p>' +
+      '<div class="bc2-findings-list">' + items + '</div>' +
+      '<div class="bc2-add-finding-row"><button class="bc2-add-finding" type="button">+ Add item requiring attention</button></div>' +
     '</section>';
   }
 
@@ -408,7 +412,7 @@
         '<tr><th>Inspection No.</th><td>' + esc(number) + '</td><th>Date</th><td>' + esc(date) + '</td></tr>' +
         '<tr><th>Client / Owner</th><td>' + esc(owner) + '</td><th>Outcome</th><td><span class="bc2-status bc2-' + resultClass + '">' + esc(result) + '</span></td></tr>' +
       '</tbody></table>' +
-      (findings.length ? '<div class="bc2-summary"><strong>' + findings.length + '</strong><span>item' + (findings.length === 1 ? '' : 's') + ' requiring attention</span></div>' : '') +
+      '<div class="bc2-summary"' + (findings.length ? '' : ' hidden') + '><strong>' + findings.length + '</strong><span>item' + (findings.length === 1 ? '' : 's') + ' requiring attention</span></div>' +
     '</header>';
   }
 
@@ -420,8 +424,7 @@
   }
 
   function nextSteps(findings) {
-    if (!findings.length) return "";
-    return '<section class="bc2-next"><h2>What happens next?</h2><ol><li>Arrange rectification of the items listed above.</li><li>Ensure the completed work does not create another barrier or non-climbable-zone issue.</li><li>Contact your pool safety inspector when the work is complete so the rectified items can be reassessed.</li></ol></section>';
+    return '<section class="bc2-next"' + ((findings || []).length ? '' : ' hidden') + '><h2>What happens next?</h2><ol><li>Arrange rectification of the items listed above.</li><li>Ensure the completed work does not create another barrier or non-climbable-zone issue.</li><li>Contact your pool safety inspector when the work is complete so the rectified items can be reassessed.</li></ol></section>';
   }
 
   function sourceNote() {
@@ -443,14 +446,14 @@
       ".bc2-status{display:inline-block;padding:.7mm 1.8mm;border-radius:99px;font-weight:800}.bc2-fail{background:#fdecec;color:#9d2424}.bc2-pass{background:#e9f5ec;color:#23663a}",
       ".bc2-summary{display:flex;align-items:baseline;gap:2mm;margin-top:3mm;padding:2.5mm 3mm;background:#fff4f4;border:1px solid #efd2d2;border-radius:2mm}.bc2-summary strong{font-size:18pt;color:#b3261e}.bc2-summary span{color:#6b3c3a}",
       ".bc2-section,.bc2-guidance,.bc2-next{margin-bottom:4mm}.bc2-section>h2,.bc2-guidance h2,.bc2-next h2,.bc2-appendix h2{margin:0 0 2mm;color:#03286a;font-size:12pt;border-bottom:1px solid #bed8e5;padding-bottom:1mm}.bc2-intro{margin:0 0 3mm;color:#536773;font-size:8.3pt}",
-      ".bc2-finding{border:1px solid #e5c0bd;border-left:4px solid #c62828;margin:0 0 3.5mm;border-radius:2mm;break-inside:avoid;background:#fff}.bc2-finding-head{display:flex;gap:2mm;align-items:center;padding:2mm 2.5mm;background:#fff5f4;border-bottom:1px solid #efd6d3}.bc2-finding-head>span{background:#c62828;color:#fff;font-weight:800;border-radius:99px;padding:.8mm 1.6mm;font-size:7.5pt}.bc2-finding-head strong{display:block;color:#7f211b;font-size:10pt}.bc2-finding-head small{display:block;color:#80635f;font-size:7.3pt;margin-top:.5mm}",
+      ".bc2-finding{border:1px solid #e5c0bd;border-left:4px solid #c62828;margin:0 0 3.5mm;border-radius:2mm;break-inside:avoid;background:#fff;position:relative}.bc2-finding-head{display:flex;gap:2mm;align-items:center;padding:2mm 9mm 2mm 2.5mm;background:#fff5f4;border-bottom:1px solid #efd6d3}.bc2-finding-head>span{background:#c62828;color:#fff;font-weight:800;border-radius:99px;padding:.8mm 1.6mm;font-size:7.5pt}.bc2-finding-head strong{display:block;color:#7f211b;font-size:10pt}.bc2-finding-head small{display:block;color:#80635f;font-size:7.3pt;margin-top:.5mm}.bc2-finding-remove{position:absolute;top:1.6mm;right:1.8mm;z-index:2;width:6mm;height:6mm;border:0;border-radius:99px;background:#fff;color:#9d2424;font-size:13pt;line-height:1;cursor:pointer;box-shadow:0 0 0 1px #e7bbb7}.bc2-finding-remove:hover{background:#fdeceb}.bc2-findings-empty{margin:0 0 3mm;padding:2.5mm 3mm;background:#f7fafb;border:1px dashed #c9d8df;border-radius:2mm;color:#5d707b}.bc2-add-finding-row{display:flex;justify-content:center;margin:2mm 0 0}.bc2-add-finding{border:1px dashed #5b9fbd;background:#f4fbff;color:#0a527b;border-radius:8px;padding:2.4mm 4mm;font-weight:800;cursor:pointer}.bc2-add-finding:hover{background:#eaf7fd}",
       ".bc2-block{padding:2mm 2.7mm;border-bottom:1px solid #edf0f2}.bc2-block:last-child{border-bottom:0}.bc2-block>b{display:block;color:#29495d;font-size:7.8pt;margin-bottom:.7mm}.bc2-block p{margin:0}.bc2-block ul{margin:1mm 0 0 4mm;padding-left:4mm}.bc2-block li{margin:.6mm 0}.bc2-source{margin-top:1.2mm!important;color:#536773;font-size:7.7pt}.bc2-options{background:#f7fbfd}.bc2-items{background:#fbfcfd}.bc2-small{margin-top:1mm!important;color:#687780;font-size:7.2pt;font-style:italic}.bc2-evidence{background:#f8fafb}",
       ".bc2-guidance,.bc2-next,.bc2-source-note,.bc2-compliant{padding:2.5mm 3mm;border:1px solid #d8e4ea;background:#f8fbfc;break-inside:avoid}.bc2-guidance p,.bc2-next p,.bc2-source-note p,.bc2-compliant p{margin:1mm 0 0}.bc2-next ol{margin:1mm 0 0 5mm;padding-left:4mm}.bc2-next li{margin:.7mm 0}.bc2-source-note{font-size:7.4pt;color:#536570;margin:4mm 0}",
       ".bc2-inline-photo-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:3mm;margin-top:1.5mm}.bc2-inline-photo-grid figure{margin:0;border:1px solid #d7e2e7;border-radius:2mm;padding:1.5mm;background:#fff;break-inside:avoid;position:relative}.bc2-inline-photo-grid img{width:100%;height:58mm;object-fit:contain;background:#f5f7f8}.bc2-inline-photo-grid figcaption{margin-top:1mm;font-size:7.2pt;color:#52636d}.bc2-photo-exclude{margin-top:1.5mm;border:1px solid #c9dbe3;background:#fff;color:#36596b;border-radius:5px;padding:1.2mm 2mm;font-size:7pt;cursor:pointer}",
       ".bc2-related-label{margin-top:1.5mm!important;font-weight:700;color:#3d5664}.bc2-editable[contenteditable=true]{outline:1px dashed transparent;border-radius:2px;transition:outline-color .15s,background .15s}.bc2-editable[contenteditable=true]:hover{outline-color:#80b9d4;background:#f4fbff}.bc2-editable[contenteditable=true]:focus{outline:2px solid #0d82d8;background:#fff;box-shadow:0 0 0 2px rgba(13,130,216,.08)}",
       "#bc2EditorBar{position:fixed;z-index:1000002;left:50%;top:10px;transform:translateX(-50%);display:flex;align-items:center;gap:8px;max-width:calc(100vw - 20px);padding:8px 10px;background:#0b3553;color:#fff;border-radius:12px;box-shadow:0 6px 22px rgba(0,0,0,.22);font:13px/1.25 Arial,sans-serif}#bc2EditorBar .bc2-editor-note{font-weight:700;margin-right:6px;white-space:nowrap}#bc2EditorBar button{border:0;border-radius:8px;padding:8px 11px;font-weight:700;cursor:pointer}#bc2EditorBar .bc2-print{background:#fff;color:#073158}#bc2EditorBar .bc2-reset{background:#dcedf6;color:#073158}#bc2EditorBar .bc2-close{background:#ffe7e5;color:#8b201b}",
       "@media screen{body.customer-report-v2 #customerReportV2Root{box-shadow:0 0 30px rgba(0,0,0,.12);margin-top:64px;margin-bottom:70px}.download-close-btn{display:none!important}}",
-      "@media print{@page{size:A4;margin:8mm 9mm}body.customer-report-v2 #customerReportV2Root{display:block!important;max-width:none!important;margin:0!important;padding:0!important}body.customer-report-v2>.app-shell,body.customer-report-v2 .download-close-btn,#bc2EditorBar,.bc2-photo-exclude{display:none!important}.bc2-editable[contenteditable=true]{outline:0!important;background:transparent!important;box-shadow:none!important}.bc2-finding{break-inside:auto}.bc2-finding-head,.bc2-block{break-inside:avoid}.bc2-inline-photo-grid img{height:56mm}}"
+      "@media print{@page{size:A4;margin:8mm 9mm}body.customer-report-v2 #customerReportV2Root{display:block!important;max-width:none!important;margin:0!important;padding:0!important}body.customer-report-v2>.app-shell,body.customer-report-v2 .download-close-btn,#bc2EditorBar,.bc2-photo-exclude,.bc2-finding-remove,.bc2-add-finding-row{display:none!important}.bc2-editable[contenteditable=true]{outline:0!important;background:transparent!important;box-shadow:none!important}.bc2-finding{break-inside:auto}.bc2-finding-head,.bc2-block{break-inside:avoid}.bc2-inline-photo-grid img{height:56mm}}"
     ].join("\n");
     document.head.appendChild(style);
   }
@@ -497,8 +500,8 @@
     }));
   }
 
-  function enableReportEditing(root) {
-    if (!root) return;
+  function makeReportTextEditable(scope) {
+    if (!scope) return;
     var selectors = [
       ".bc2-kicker",
       ".bc2-brand h1",
@@ -517,21 +520,94 @@
       ".bc2-next li"
     ];
 
-    Array.prototype.slice.call(root.querySelectorAll(selectors.join(","))).forEach(function (el) {
+    Array.prototype.slice.call(scope.querySelectorAll(selectors.join(","))).forEach(function (el) {
       el.setAttribute("contenteditable", "true");
       el.setAttribute("spellcheck", "true");
       el.classList.add("bc2-editable");
     });
+  }
 
-    Array.prototype.slice.call(root.querySelectorAll(".bc2-photo-exclude")).forEach(function (button) {
-      button.addEventListener("click", function () {
-        var figure = button.closest("figure");
-        var grid = button.closest(".bc2-inline-photo-grid");
-        var block = button.closest(".bc2-evidence");
-        if (figure) figure.remove();
-        if (grid && !grid.querySelector("figure") && block) block.remove();
-      });
+  function syncFindingControls(root) {
+    if (!root) return;
+    var findings = Array.prototype.slice.call(root.querySelectorAll(".bc2-findings-list .bc2-finding"));
+    findings.forEach(function (article, index) {
+      var number = article.querySelector(".bc2-finding-head>span");
+      if (number) number.textContent = "F" + String(index + 1).padStart(2, "0");
     });
+
+    var empty = root.querySelector(".bc2-findings-empty");
+    if (empty) empty.hidden = findings.length > 0;
+
+    var summary = root.querySelector(".bc2-summary");
+    if (summary) {
+      summary.hidden = findings.length === 0;
+      var count = summary.querySelector("strong");
+      var label = summary.querySelector("span");
+      if (count) count.textContent = String(findings.length);
+      if (label) label.textContent = "item" + (findings.length === 1 ? "" : "s") + " requiring attention";
+    }
+
+    var next = root.querySelector(".bc2-next");
+    if (next) next.hidden = findings.length === 0;
+  }
+
+  function addManualFinding(root) {
+    if (!root) return;
+    var list = root.querySelector(".bc2-findings-list");
+    if (!list) return;
+
+    var article = document.createElement("article");
+    article.className = "bc2-finding bc2-manual-finding";
+    article.setAttribute("data-report-group", "manual");
+    article.innerHTML =
+      '<button class="bc2-finding-remove" type="button" aria-label="Remove this item from report" title="Remove from report">×</button>' +
+      '<div class="bc2-finding-head"><span>F00</span><div><strong>New item requiring attention</strong><small>Click the text below to edit this client-facing item.</small></div></div>' +
+      '<div class="bc2-block"><b>What needs attention</b><p>Describe the issue observed.</p></div>' +
+      '<div class="bc2-block"><b>Why this matters</b><p>Explain why this condition matters.</p></div>' +
+      '<div class="bc2-block"><b>Requirement</b><p>Describe the requirement that needs to be met.</p></div>' +
+      '<div class="bc2-block bc2-options"><b>Possible ways to rectify the issue</b><ul><li>Describe the recommended rectification action.</li></ul></div>';
+
+    list.appendChild(article);
+    makeReportTextEditable(article);
+    syncFindingControls(root);
+    article.scrollIntoView({ block: "center" });
+    var title = article.querySelector(".bc2-finding-head strong");
+    if (title && typeof title.focus === "function") title.focus();
+  }
+
+  function enableReportEditing(root) {
+    if (!root) return;
+    makeReportTextEditable(root);
+
+    if (root.dataset.bcReportControlsBound !== "1") {
+      root.dataset.bcReportControlsBound = "1";
+      root.addEventListener("click", function (event) {
+        var photoButton = event.target.closest(".bc2-photo-exclude");
+        if (photoButton && root.contains(photoButton)) {
+          var figure = photoButton.closest("figure");
+          var grid = photoButton.closest(".bc2-inline-photo-grid");
+          var block = photoButton.closest(".bc2-evidence");
+          if (figure) figure.remove();
+          if (grid && !grid.querySelector("figure") && block) block.remove();
+          return;
+        }
+
+        var removeButton = event.target.closest(".bc2-finding-remove");
+        if (removeButton && root.contains(removeButton)) {
+          var article = removeButton.closest(".bc2-finding");
+          if (article) article.remove();
+          syncFindingControls(root);
+          return;
+        }
+
+        var addButton = event.target.closest(".bc2-add-finding");
+        if (addButton && root.contains(addButton)) {
+          addManualFinding(root);
+        }
+      });
+    }
+
+    syncFindingControls(root);
   }
 
   function removeEditorBar() {
