@@ -1105,6 +1105,13 @@
         workflow: workflowSnapshot()
       };
       data.auditTimeline = buildTimeline(data);
+
+      var previousInspection = null;
+      try {
+        if (data.id && typeof window.getInspectionById === "function") previousInspection = window.getInspectionById(data.id);
+      } catch (error) {}
+      data.clientReportAudit = window.BARRIER_CHECK_CLIENT_REPORT_AUDIT ||
+        (previousInspection && previousInspection.clientReportAudit) || null;
       return data;
     };
   }
