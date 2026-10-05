@@ -4263,11 +4263,13 @@ function collectFindings() {
       });
 
       // Dynamic physical inspection cards represent one structure/area even
-      // when several individual checklist rules fail. Expose a stable report
-      // grouping key so the client report can describe that as one issue.
+      // when several individual checklist rules fail. Use the actual card's
+      // DOM position rather than its display name/photo-area label so renamed
+      // or re-numbered structures cannot be merged accidentally.
       if (nearestCard.classList && nearestCard.classList.contains("fence-card")) {
-        reportGroupKey = evidenceAreas.length
-          ? "structure:" + evidenceAreas.slice().sort().join("|")
+        var physicalCardIndex = qsa(".fence-card").indexOf(nearestCard);
+        reportGroupKey = physicalCardIndex >= 0
+          ? "structure-card:" + physicalCardIndex
           : "structure:" + String(result.item || "inspection-item").toLowerCase();
       }
     }
