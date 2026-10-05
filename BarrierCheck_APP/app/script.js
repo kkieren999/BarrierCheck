@@ -4251,6 +4251,7 @@ function collectFindings() {
     var nearestCard = el.closest(".fence-card") || el.closest(".section-card");
     var comments = [];
     var evidenceAreas = [];
+    var reportGroupKey = "";
     if (nearestCard) {
       nearestCard.querySelectorAll("textarea").forEach(function (textarea) {
         var text = textarea.value.trim();
@@ -4260,6 +4261,17 @@ function collectFindings() {
         var area = widget.getAttribute("data-photo-area");
         if (area && evidenceAreas.indexOf(area) === -1) evidenceAreas.push(area);
       });
+
+      // Dynamic physical inspection cards represent one structure/area even
+      // when several individual checklist rules fail. Use the actual card's
+      // DOM position rather than its display name/photo-area label so renamed
+      // or re-numbered structures cannot be merged accidentally.
+      if (nearestCard.classList && nearestCard.classList.contains("fence-card")) {
+        var physicalCardIndex = qsa(".fence-card").indexOf(nearestCard);
+        reportGroupKey = physicalCardIndex >= 0
+          ? "structure-card:" + physicalCardIndex
+          : "structure:" + String(result.item || "inspection-item").toLowerCase();
+      }
     }
     findings.push({
       id: result.rule.id,
@@ -4272,7 +4284,8 @@ function collectFindings() {
       recommendation: result.recommendation,
       source: result.rule.source || "Rule bank",
       inspectorNotes: comments.join(" "),
-      evidenceAreas: evidenceAreas
+      evidenceAreas: evidenceAreas,
+      reportGroupKey: reportGroupKey
     });
   });
   return findings;
