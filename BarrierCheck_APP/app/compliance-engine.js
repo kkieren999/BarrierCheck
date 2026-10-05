@@ -906,10 +906,11 @@
     var periodEnd = notice ? addCalendarMonths(notice, 3) : "";
     return {
       certificateOrNoticeGeneralDue: inspection ? addBusinessDays(inspection, 2) : "",
-      minorRepairAgreementDue: value(document, "minorRepairAgreement") === "Yes" && inspection ? addBusinessDays(inspection, 20) : "",
+      minorRepairAgreementDue: value(document, "minorRepairAgreementDueDate") || (value(document, "minorRepairAgreement") === "Yes" && inspection ? addBusinessDays(inspection, 20) : ""),
       reinspectionPeriodEnd: periodEnd,
       localGovernmentNotificationDue: periodEnd ? addBusinessDays(periodEnd, 5) : "",
-      reinspectionServiceDue: request ? (agreedLater || addBusinessDays(request, 5)) : ""
+      reinspectionServiceDue: value(document, "reinspectionDueDate") || (request ? (agreedLater || addBusinessDays(request, 5)) : ""),
+      calculationNote: "Guide dates exclude weekends but do not automatically account for Queensland public holidays. Verify statutory business-day dates before acting."
     };
   }
 
@@ -920,19 +921,19 @@
       if (due && due < today && !completed) alerts.push({ code: code, due: due, message: message });
     }
     if (value(document, "certificateReadyToIssue") === "Yes") {
-      overdue("certificate-due", deadlines.certificateOrNoticeGeneralDue, value(document, "certificateIssuedDate"), "Pool safety certificate issue date is not recorded and the general two-business-day issue window has passed.");
+      overdue("certificate-due", deadlines.certificateOrNoticeGeneralDue, value(document, "certificateIssuedDate"), "Potential deadline check: the certificate issue date is not recorded and the guide two-business-day date has passed. Verify public holidays and the applicable statutory pathway.");
     }
     if (value(document, "nonconformityNoticeRequired") === "Yes" && value(document, "minorRepairAgreement") !== "Yes") {
-      overdue("nonconformity-notice-due", deadlines.certificateOrNoticeGeneralDue, value(document, "nonconformityNoticeIssuedDate"), "Nonconformity notice issue date is not recorded and the general two-business-day issue window has passed.");
+      overdue("nonconformity-notice-due", deadlines.certificateOrNoticeGeneralDue, value(document, "nonconformityNoticeIssuedDate"), "Potential deadline check: the nonconformity notice issue date is not recorded and the guide two-business-day date has passed. Verify public holidays and any applicable exception pathway.");
     }
     if (value(document, "minorRepairAgreement") === "Yes") {
-      overdue("minor-repair-due", deadlines.minorRepairAgreementDue, value(document, "reinspectionCompletedDate"), "The recorded minor-repair agreement has passed the 20-business-day window without a completed inspection outcome date.");
+      overdue("minor-repair-due", deadlines.minorRepairAgreementDue, value(document, "reinspectionCompletedDate"), "Potential deadline check: the recorded minor-repair agreement has passed its recorded/guide due date without a completed inspection outcome date.");
     }
     if (value(document, "reinspectionRequestedDate")) {
-      overdue("reinspection-service-due", deadlines.reinspectionServiceDue, value(document, "reinspectionCompletedDate"), "A requested reinspection is past the calculated five-business-day service date and no later agreed/completed date is recorded.");
+      overdue("reinspection-service-due", deadlines.reinspectionServiceDue, value(document, "reinspectionCompletedDate"), "Potential deadline check: the requested reinspection is past its recorded/guide service date and no later agreed/completed date is recorded.");
     }
     if (value(document, "nonconformityNoticeIssuedDate") && !value(document, "reinspectionRequestedDate")) {
-      overdue("local-government-notification-due", deadlines.localGovernmentNotificationDue, value(document, "localGovernmentNotifiedDate"), "No reinspection request is recorded and the calculated local-government notification date has passed.");
+      overdue("local-government-notification-due", deadlines.localGovernmentNotificationDue, value(document, "localGovernmentNotifiedDate"), "Potential deadline check: no reinspection request is recorded and the guide local-government notification date has passed. Verify the business-day calculation before acting.");
     }
     return alerts;
   }
@@ -985,6 +986,53 @@
     return timeline.slice(-200);
   }
 
+  function updateComplianceReviewUi() {
+    var manual = manualReviews();
+    var workflow = workflowSnapshot();
+    var alerts = workflow.alerts || [];
+    var manualCount = document.getElementById("summaryManualReviewCount");
+    var alertCount = document.getElementById("summaryWorkflowAlertCount");
+    var status = document.getElementById("summaryComplianceEngineStatus");
+    var list = document.getElementById("summaryComplianceAlerts");
+
+    if (manualCount) manualCount.textContent = String(manual.length);
+    if (alertCount) alertCount.textContent = String(alerts.length);
+    if (status) {
+      if (!manual.length && !alerts.length) {
+        status.textContent = "No unresolved conditional-evidence or workflow-date checks are currently flagged by the compliance engine.";
+      } else {
+        status.textContent = [
+          manual.length ? manual.length + " inspector review item" + (manual.length === 1 ? "" : "s") : "",
+          alerts.length ? alerts.length + " workflow date check" + (alerts.length === 1 ? "" : "s") : ""
+        ].filter(Boolean).join(" • ") + ". These prompts support, but do not replace, the inspector's statutory decision.";
+      }
+    }
+
+    if (list) {
+      list.innerHTML = "";
+      manual.slice(0, 8).forEach(function (review) {
+        var li = document.createElement("li");
+        li.textContent = review.item + ": " + review.reason;
+        list.appendChild(li);
+      });
+      alerts.slice(0, 6).forEach(function (alert) {
+        var li = document.createElement("li");
+        li.textContent = alert.message + (alert.due ? " Guide/recorded date: " + alert.due + "." : "");
+        list.appendChild(li);
+      });
+      if ((manual.length + alerts.length) > 14) {
+        var more = document.createElement("li");
+        more.textContent = "Additional review items are retained in the saved compliance-engine audit record.";
+        list.appendChild(more);
+      }
+      if (workflow.derivedDeadlines && workflow.derivedDeadlines.calculationNote && (alerts.length || manual.length)) {
+        var note = document.createElement("li");
+        note.textContent = workflow.derivedDeadlines.calculationNote;
+        list.appendChild(note);
+      }
+    }
+  }
+
   function refreshDerivedMarkers(target) {
     var card = target && target.closest ? target.closest(".fence-card") : null;
     if (!card || typeof window.applyComplianceMarkerForElement !== "function") return;
@@ -997,6 +1045,8 @@
       var el = field(card, name);
       if (el) window.applyComplianceMarkerForElement(el);
     });
+    var summaryPage = document.getElementById("summary");
+    if (summaryPage && summaryPage.classList.contains("active-page")) updateComplianceReviewUi();
   }
 
   var DERIVED_OWNED_FIELDS = {
@@ -1026,6 +1076,15 @@
         if (!finding.ruleField) finding.ruleField = finding.field || "";
       });
       return findings;
+    };
+  }
+
+  var baseRefreshSummary = window.refreshSummary;
+  if (typeof baseRefreshSummary === "function") {
+    window.refreshSummary = function () {
+      var result = baseRefreshSummary.apply(this, arguments);
+      updateComplianceReviewUi();
+      return result;
     };
   }
 
@@ -1076,6 +1135,9 @@
     buildDecisionAudit: buildDecisionAudit,
     specialAuthoritySnapshot: specialAuthoritySnapshot,
     workflowSnapshot: workflowSnapshot,
-    workflowDeadlines: workflowDeadlines
+    workflowDeadlines: workflowDeadlines,
+    updateComplianceReviewUi: updateComplianceReviewUi
   };
+
+  window.setTimeout(updateComplianceReviewUi, 0);
 })();
