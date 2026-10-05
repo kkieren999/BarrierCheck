@@ -3,7 +3,7 @@
 (function () {
   "use strict";
 
-  var REPORT_VERSION = "20261005.5";
+  var REPORT_VERSION = "20261005.6";
   var priorCloseDownloadMode = window.closeDownloadMode;
   var CLIENT_REPORT_HIDDEN_FINDING_IDS = [
     "overall-result-fail",
@@ -152,6 +152,11 @@
     return (findings || []).filter(function (finding) {
       return CLIENT_REPORT_HIDDEN_FINDING_IDS.indexOf(finding && finding.id) === -1;
     });
+  }
+
+  function isSpecialistReferralFinding(finding) {
+    var id = clean(finding && finding.id).toLowerCase();
+    return ["observed-electricalissueobserved","observed-bondingconcernnoted","observed-possibleasbestosobserved","observed-firesafetyissueobserved","observed-referralrecommended"].indexOf(id) !== -1;
   }
 
   function sourcesText(rule, finding) {
@@ -384,9 +389,16 @@
 
   function renderFindings(groups, photos) {
     if (!groups.length) {
-      return '<section class="bc2-section"><h2>Inspection outcome</h2><div class="bc2-compliant"><strong>No non-compliance findings were generated from the recorded inspection.</strong><p>The detailed inspection record remains stored in BarrierCheck.</p></div></section>';
+      return '<section class="bc2-section"><h2>Inspection outcome</h2><div class="bc2-compliant"><strong>No pool-barrier non-compliance findings were generated from the recorded inspection.</strong><p>The detailed inspection record remains stored in BarrierCheck.</p></div></section>';
     }
-    return '<section class="bc2-section"><h2>Items requiring attention</h2><p class="bc2-intro">Where recorded failures describe the same underlying condition, BarrierCheck combines them into one client-facing issue. Independent defects remain separate.</p>' +
+    return '<section class="bc2-section"><h2>Pool barrier items requiring attention</h2><p class="bc2-intro">Where recorded failures describe the same underlying condition, BarrierCheck combines them into one client-facing issue. Independent defects remain separate.</p>' +
+      groups.map(function (group, index) { return renderFindingGroup(group, index, photos); }).join("") +
+    '</section>';
+  }
+
+  function renderSpecialistReferrals(groups, photos) {
+    if (!groups.length) return "";
+    return '<section class="bc2-section bc2-referrals"><h2>Other safety / specialist referrals</h2><p class="bc2-intro">These observations are recorded separately from pool-barrier compliance findings and may require advice from a suitably qualified specialist.</p>' +
       groups.map(function (group, index) { return renderFindingGroup(group, index, photos); }).join("") +
     '</section>';
   }
@@ -464,10 +476,13 @@
     if (typeof window.refreshSummary === "function") window.refreshSummary(true);
 
     var allFindings = typeof window.collectFindings === "function" ? window.collectFindings() : [];
-    var findings = filterClientFindings(allFindings);
+    var visibleFindings = filterClientFindings(allFindings);
+    var findings = visibleFindings.filter(function (finding) { return !isSpecialistReferralFinding(finding); });
+    var referrals = visibleFindings.filter(isSpecialistReferralFinding);
     var groups = groupClientFindings(findings);
+    var referralGroups = groupClientFindings(referrals);
     var photos = buildPhotoRegistry();
-    var findingsHtml = renderFindings(groups, photos);
+    var findingsHtml = renderFindings(groups, photos) + renderSpecialistReferrals(referralGroups, photos);
 
     var root = document.createElement("main");
     root.id = "customerReportV2Root";
