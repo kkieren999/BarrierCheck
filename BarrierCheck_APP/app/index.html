@@ -259,6 +259,24 @@
 </select>
 </label>
 <label class="field">
+<span>All regulated pools on this property assessed</span>
+<select data-save="" name="allRegulatedPoolsAssessed">
+<option value="">Select</option>
+<option>Yes</option>
+<option>No</option>
+<option>N/A</option>
+</select>
+</label>
+<label class="field">
+<span>All regulated pools comply for certification</span>
+<select data-save="" name="allRegulatedPoolsComply">
+<option value="">Select</option>
+<option>Pass</option>
+<option>Fail</option>
+<option>N/A</option>
+</select>
+</label>
+<label class="field">
 <span>Shared / non-shared confirmed</span>
 <select data-save="" name="sharedStatusConfirmed">
 <option>Yes</option>
@@ -1212,6 +1230,9 @@
 <label class="field"><span>Nonconformity notice issued date</span><input data-save="" name="nonconformityNoticeIssuedDate" type="date" /></label>
 <label class="field"><span>Nonconformity notice reference</span><input data-save="" name="nonconformityNoticeReference" type="text" placeholder="Notice / file reference" /></label>
 <label class="field"><span>Minor-repair agreement</span><select data-save="" name="minorRepairAgreement"><option value="">Select</option><option>No</option><option>Yes</option><option>N/A</option></select></label>
+<label class="field"><span>Minor-repair description / agreed scope</span><input data-save="" name="minorRepairDescription" type="text" placeholder="Brief agreed repair scope" /></label>
+<label class="field"><span>Estimated minor-repair value ($)</span><input data-save="" name="minorRepairEstimatedCost" type="number" step="0.01" min="0" placeholder="0" /></label>
+<label class="field"><span>Additional QBCC licence held if value exceeds PSI minor-repair limit</span><select data-save="" name="minorRepairAdditionalLicenceHeld"><option value="">Select</option><option>Yes</option><option>No</option><option>N/A</option></select></label>
 <label class="field"><span>Minor-repair agreement due date</span><input data-save="" name="minorRepairAgreementDueDate" type="date" /></label>
 <label class="field"><span>Reinspection due date</span><input data-save="" name="reinspectionDueDate" type="date" /></label>
 <label class="field"><span>Reinspection requested date</span><input data-save="" name="reinspectionRequestedDate" type="date" /></label>
