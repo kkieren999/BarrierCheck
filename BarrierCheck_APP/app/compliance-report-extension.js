@@ -235,4 +235,44 @@
       "Obtain/retain any required certifier or inspector approval for the temporary-fence period."
     ]
   });
+
+  add("engine-ncz-end-extension", {
+    customerTitle: "NCZ does not continue far enough past the fence end / intersection",
+    whyItMatters: "A child may be able to approach the barrier from beside an interrupted NCZ if the protected zone stops at a corner, fence end or intersection.",
+    requirementSummary: "Where the NCZ is provided on the outside, it must continue 900 mm beyond the end of the fence and beyond intersections with another barrier or object, together with the associated additional clear area.",
+    sources: [{ document: "Queensland Development Code MP 3.4", clause: "Schedule 1 modification 10" }],
+    possibleRectificationOptions: [
+      "Extend/reconfigure the relevant NCZ and clear area through the required distance beyond the fence end or intersection.",
+      "Remove or relocate the intersecting climbable feature where that provides a compliant permanent arrangement.",
+      "Reconfigure the adjoining barrier so the full NCZ relationship can be maintained and reassessed."
+    ]
+  });
+
+  add("engine-additional-clear-area-width", {
+    customerTitle: "Additional clear area beside the outside NCZ is insufficient",
+    whyItMatters: "Raised or nearby features in this area can reduce the effective height available above a climbable level even if the fence panel itself is unchanged.",
+    requirementSummary: "When the NCZ is on the outside, an additional clear area must be maintained immediately beside it. Queensland inspector guidance describes this as a 300 mm-wide area used to preserve the required effective barrier height.",
+    sources: [
+      { document: "Queensland Development Code MP 3.4", clause: "Schedule 1 modification 9" },
+      { document: "Guideline for pool safety inspectors", clause: "Additional clear area" }
+    ],
+    possibleRectificationOptions: [
+      "Remove or relocate raised/climbable objects that encroach on the additional clear area.",
+      "Alter the permanent ground/landscape level where appropriate so the required effective height is maintained.",
+      "Reconfigure or increase the barrier where the surrounding level cannot be changed, then reassess the NCZ and effective height."
+    ]
+  });
+
+  add("engine-inside-ncz-intersection", {
+    customerTitle: "Intersecting surface is too wide within the inside NCZ",
+    whyItMatters: "A wide rail or surface crossing the inside NCZ can create a usable climbing platform next to the barrier.",
+    requirementSummary: "For a barrier 1800 mm or higher using an inside NCZ, an intersecting barrier is only permitted where the top rail or surface is no more than 50 mm wide at points within the NCZ.",
+    sources: [{ document: "Queensland Development Code MP 3.4", clause: "Schedule 1 modification 11" }],
+    possibleRectificationOptions: [
+      "Reduce or replace the intersecting rail/surface so its width within the NCZ satisfies the permitted arrangement.",
+      "Remove/reconfigure the intersecting feature so it no longer crosses the inside NCZ.",
+      "Use another compliant NCZ/barrier arrangement and reassess the complete intersection."
+    ]
+  });
+
 })();
