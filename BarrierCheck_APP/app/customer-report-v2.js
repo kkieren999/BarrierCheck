@@ -3,7 +3,7 @@
 (function () {
   "use strict";
 
-  var REPORT_VERSION = "20261005.4";
+  var REPORT_VERSION = "20261005.5";
   var priorCloseDownloadMode = window.closeDownloadMode;
   var CLIENT_REPORT_HIDDEN_FINDING_IDS = [
     "overall-result-fail",
@@ -177,28 +177,120 @@
     });
   }
 
-  function groupClientFindings(findings) {
-    var groups = [];
-    var grouped = {};
+  function reportLogicBank() {
+    return window.BARRIER_CHECK_REPORT_LOGIC || { scenarios: [], duplicateRules: {} };
+  }
 
-    (findings || []).forEach(function (finding, index) {
-      var key = clean(finding && finding.reportGroupKey);
-      if (!key) {
-        groups.push({ key: "single:" + index, findings: [finding] });
-        return;
-      }
-
-      if (!grouped[key]) {
-        grouped[key] = { key: key, findings: [] };
-        groups.push(grouped[key]);
-      }
-      grouped[key].findings.push(finding);
+  function suppressDuplicateClientFindings(findings) {
+    var bank = reportLogicBank();
+    var duplicates = bank.duplicateRules || {};
+    var present = {};
+    (findings || []).forEach(function (finding) {
+      if (finding && finding.id) present[finding.id] = true;
     });
 
+    return (findings || []).filter(function (finding) {
+      var detailedIds = duplicates[finding && finding.id] || [];
+      return !detailedIds.some(function (id) { return !!present[id]; });
+    });
+  }
+
+  function hasAll(ids, required) {
+    return (required || []).every(function (id) { return !!ids[id]; });
+  }
+
+  function hasAny(ids, options) {
+    if (!options || !options.length) return true;
+    return options.some(function (id) { return !!ids[id]; });
+  }
+
+  function scenarioMatch(findings, scenario) {
+    var ids = {};
+    (findings || []).forEach(function (finding) {
+      if (finding && finding.id) ids[finding.id] = true;
+    });
+
+    if (!hasAll(ids, scenario.all || [])) return null;
+    if (scenario.anyCause && scenario.anyCause.length && !hasAny(ids, scenario.anyCause)) return null;
+    if (scenario.any && scenario.any.length && !hasAny(ids, scenario.any)) return null;
+
+    if (scenario.matchIds && scenario.minMatches) {
+      var count = scenario.matchIds.filter(function (id) { return !!ids[id]; }).length;
+      if (count < scenario.minMatches) return null;
+    }
+
+    var consume = scenario.consume || scenario.matchIds || [];
+    var matched = (findings || []).filter(function (finding) {
+      return finding && consume.indexOf(finding.id) !== -1;
+    });
+    return matched.length ? matched : null;
+  }
+
+  function splitBucketByCausalLogic(bucket) {
+    var remaining = (bucket.findings || []).slice();
+    var result = [];
+    var scenarios = (reportLogicBank().scenarios || []).slice().sort(function (a, b) {
+      return (b.priority || 0) - (a.priority || 0);
+    });
+
+    scenarios.forEach(function (scenario) {
+      var matched = scenarioMatch(remaining, scenario);
+      if (!matched || matched.length < 2) return;
+
+      var matchedSet = {};
+      matched.forEach(function (finding) { matchedSet[finding.__reportIndex] = true; });
+      result.push({
+        key: bucket.key + ":scenario:" + scenario.id,
+        findings: matched,
+        scenario: scenario,
+        order: Math.min.apply(Math, matched.map(function (finding) { return finding.__reportIndex; }))
+      });
+      remaining = remaining.filter(function (finding) { return !matchedSet[finding.__reportIndex]; });
+    });
+
+    remaining.forEach(function (finding) {
+      result.push({
+        key: bucket.key + ":single:" + finding.__reportIndex,
+        findings: [finding],
+        scenario: null,
+        order: finding.__reportIndex
+      });
+    });
+
+    return result;
+  }
+
+  function groupClientFindings(findings) {
+    var filtered = suppressDuplicateClientFindings(findings);
+    var buckets = [];
+    var bucketMap = {};
+
+    filtered.forEach(function (finding, index) {
+      finding.__reportIndex = index;
+      var key = clean(finding && finding.reportGroupKey);
+      if (!key) key = "item:" + clean(finding && finding.item).toLowerCase();
+      if (!key || key === "item:") key = "single-scope:" + index;
+
+      if (!bucketMap[key]) {
+        bucketMap[key] = { key: key, findings: [] };
+        buckets.push(bucketMap[key]);
+      }
+      bucketMap[key].findings.push(finding);
+    });
+
+    var groups = [];
+    buckets.forEach(function (bucket) {
+      groups = groups.concat(splitBucketByCausalLogic(bucket));
+    });
+    groups.sort(function (a, b) { return a.order - b.order; });
+
+    filtered.forEach(function (finding) {
+      try { delete finding.__reportIndex; } catch (error) {}
+    });
     return groups;
   }
 
-  function ruleDetails(finding) {
+  function ruleDetails(finding) {  function ruleDetails(finding) {
     var lib = library();
     var rule = lib.rules && lib.rules[finding.id] ? lib.rules[finding.id] : null;
     return {
@@ -230,9 +322,13 @@
     if (!evidence.length) return "";
     return '<div class="bc2-block bc2-evidence"><b>Photographic evidence</b><div class="bc2-inline-photo-grid">' +
       evidence.map(function (photo) {
-        return '<figure><img src="' + esc(photo.src) + '" alt="' + esc(photo.code) + '"><figcaption><strong>' + esc(photo.code) + '</strong> — ' + esc(photo.caption) + '</figcaption></figure>';
+        return '<figure><img src="' + esc(photo.src) + '" alt="' + esc(photo.code) + '"><figcaption><strong>' + esc(photo.code) + '</strong> — ' + esc(photo.caption) + '</figcaption><button class="bc2-photo-exclude" type="button">Exclude from this report</button></figure>';
       }).join("") +
     '</div></div>';
+  }
+
+  function scenarioText(value, item) {
+    return clean(String(value || "").replace(/\{item\}/g, item || "this inspection area"));
   }
 
   function renderFindingGroup(group, index, photos) {
@@ -242,27 +338,38 @@
     var primary = details[0];
     var firstFinding = primary.finding;
     var item = clean(firstFinding.item || firstFinding.field || "Inspection issue");
+    var scenario = group.scenario || null;
     var isGrouped = details.length > 1;
-    var title = isGrouped ? item : (primary.rule && primary.rule.customerTitle ? primary.rule.customerTitle : item);
-    var subTitle = !isGrouped && clean(firstFinding.item) && clean(firstFinding.item) !== clean(title) ? clean(firstFinding.item) : "";
+    var title = scenario ? scenarioText(scenario.title, item) : (isGrouped ? item : (primary.rule && primary.rule.customerTitle ? primary.rule.customerTitle : item));
+    var subTitle = !scenario && !isGrouped && clean(firstFinding.item) && clean(firstFinding.item) !== clean(title) ? clean(firstFinding.item) : "";
     var evidence = groupEvidence(group, photos);
 
     var problemHtml = "";
-    if (isGrouped) {
+    if (scenario) {
+      problemHtml = '<p>' + esc(scenarioText(scenario.problem, item)) + '</p>' +
+        '<p class="bc2-related-label">Recorded failed checks:</p>' +
+        listHtml(uniqueStrings(details.map(function (detail) { return detail.finding.field; })));
+    } else if (isGrouped) {
       problemHtml = '<p>Several related checks for ' + esc(item) + ' were recorded as non-compliant:</p>' +
         listHtml(uniqueStrings(details.map(function (detail) { return detail.finding.field; })));
     } else {
       problemHtml = '<p>' + esc(primary.problem) + '</p>';
     }
 
-    var whyItems = uniqueStrings(details.map(function (detail) { return detail.why; }));
-    var requirementItems = uniqueStrings(details.map(function (detail) { return detail.requirement; }));
+    var whyItems = scenario
+      ? [scenarioText(scenario.why, item)]
+      : uniqueStrings(details.map(function (detail) { return detail.why; }));
+    var requirementItems = scenario
+      ? [scenarioText(scenario.requirement, item)]
+      : uniqueStrings(details.map(function (detail) { return detail.requirement; }));
     var sourceItems = uniqueStrings(details.map(function (detail) { return detail.source; }));
-    var options = uniqueStrings([].concat.apply([], details.map(function (detail) { return detail.options || []; })));
-    var itemTypes = uniqueStrings([].concat.apply([], details.map(function (detail) { return detail.itemTypes || []; })));
+    var options = scenario && scenario.rectificationOptions
+      ? uniqueStrings(scenario.rectificationOptions.map(function (option) { return scenarioText(option, item); }))
+      : uniqueStrings([].concat.apply([], details.map(function (detail) { return detail.options || []; })));
+    var itemTypes = scenario ? [] : uniqueStrings([].concat.apply([], details.map(function (detail) { return detail.itemTypes || []; })));
     var notes = uniqueStrings(details.map(function (detail) { return detail.finding.inspectorNotes; }));
 
-    return '<article class="bc2-finding">' +
+    return '<article class="bc2-finding" data-report-group="' + esc(group.key) + '"' + (scenario ? ' data-report-scenario="' + esc(scenario.id) + '"' : '') + '>' +
       '<div class="bc2-finding-head"><span>F' + String(index + 1).padStart(2, "0") + '</span><div><strong>' + esc(title) + '</strong>' + (subTitle ? '<small>' + esc(subTitle) + '</small>' : '') + '</div></div>' +
       '<div class="bc2-block"><b>What needs attention</b>' + problemHtml + '</div>' +
       '<div class="bc2-block"><b>Why this matters</b>' + (whyItems.length === 1 ? '<p>' + esc(whyItems[0]) + '</p>' : listHtml(whyItems)) + '</div>' +
@@ -279,7 +386,7 @@
     if (!groups.length) {
       return '<section class="bc2-section"><h2>Inspection outcome</h2><div class="bc2-compliant"><strong>No non-compliance findings were generated from the recorded inspection.</strong><p>The detailed inspection record remains stored in BarrierCheck.</p></div></section>';
     }
-    return '<section class="bc2-section"><h2>Items requiring attention</h2><p class="bc2-intro">Related failures from the same physical inspection section are grouped together below, with only the photographic evidence linked to that issue.</p>' +
+    return '<section class="bc2-section"><h2>Items requiring attention</h2><p class="bc2-intro">Where recorded failures describe the same underlying condition, BarrierCheck combines them into one client-facing issue. Independent defects remain separate.</p>' +
       groups.map(function (group, index) { return renderFindingGroup(group, index, photos); }).join("") +
     '</section>';
   }
@@ -339,9 +446,11 @@
       ".bc2-finding{border:1px solid #e5c0bd;border-left:4px solid #c62828;margin:0 0 3.5mm;border-radius:2mm;break-inside:avoid;background:#fff}.bc2-finding-head{display:flex;gap:2mm;align-items:center;padding:2mm 2.5mm;background:#fff5f4;border-bottom:1px solid #efd6d3}.bc2-finding-head>span{background:#c62828;color:#fff;font-weight:800;border-radius:99px;padding:.8mm 1.6mm;font-size:7.5pt}.bc2-finding-head strong{display:block;color:#7f211b;font-size:10pt}.bc2-finding-head small{display:block;color:#80635f;font-size:7.3pt;margin-top:.5mm}",
       ".bc2-block{padding:2mm 2.7mm;border-bottom:1px solid #edf0f2}.bc2-block:last-child{border-bottom:0}.bc2-block>b{display:block;color:#29495d;font-size:7.8pt;margin-bottom:.7mm}.bc2-block p{margin:0}.bc2-block ul{margin:1mm 0 0 4mm;padding-left:4mm}.bc2-block li{margin:.6mm 0}.bc2-source{margin-top:1.2mm!important;color:#536773;font-size:7.7pt}.bc2-options{background:#f7fbfd}.bc2-items{background:#fbfcfd}.bc2-small{margin-top:1mm!important;color:#687780;font-size:7.2pt;font-style:italic}.bc2-evidence{background:#f8fafb}",
       ".bc2-guidance,.bc2-next,.bc2-source-note,.bc2-compliant{padding:2.5mm 3mm;border:1px solid #d8e4ea;background:#f8fbfc;break-inside:avoid}.bc2-guidance p,.bc2-next p,.bc2-source-note p,.bc2-compliant p{margin:1mm 0 0}.bc2-next ol{margin:1mm 0 0 5mm;padding-left:4mm}.bc2-next li{margin:.7mm 0}.bc2-source-note{font-size:7.4pt;color:#536570;margin:4mm 0}",
-      ".bc2-inline-photo-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:3mm;margin-top:1.5mm}.bc2-inline-photo-grid figure{margin:0;border:1px solid #d7e2e7;border-radius:2mm;padding:1.5mm;background:#fff;break-inside:avoid}.bc2-inline-photo-grid img{width:100%;height:58mm;object-fit:contain;background:#f5f7f8}.bc2-inline-photo-grid figcaption{margin-top:1mm;font-size:7.2pt;color:#52636d}",
-      "@media screen{body.customer-report-v2 #customerReportV2Root{box-shadow:0 0 30px rgba(0,0,0,.12);margin-top:16px;margin-bottom:70px}.download-close-btn{z-index:1000000!important}}",
-      "@media print{@page{size:A4;margin:8mm 9mm}body.customer-report-v2 #customerReportV2Root{display:block!important;max-width:none!important;margin:0!important;padding:0!important}body.customer-report-v2>.app-shell,body.customer-report-v2 .download-close-btn{display:none!important}.bc2-finding{break-inside:auto}.bc2-finding-head,.bc2-block{break-inside:avoid}.bc2-inline-photo-grid img{height:56mm}}"
+      ".bc2-inline-photo-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:3mm;margin-top:1.5mm}.bc2-inline-photo-grid figure{margin:0;border:1px solid #d7e2e7;border-radius:2mm;padding:1.5mm;background:#fff;break-inside:avoid;position:relative}.bc2-inline-photo-grid img{width:100%;height:58mm;object-fit:contain;background:#f5f7f8}.bc2-inline-photo-grid figcaption{margin-top:1mm;font-size:7.2pt;color:#52636d}.bc2-photo-exclude{margin-top:1.5mm;border:1px solid #c9dbe3;background:#fff;color:#36596b;border-radius:5px;padding:1.2mm 2mm;font-size:7pt;cursor:pointer}",
+      ".bc2-related-label{margin-top:1.5mm!important;font-weight:700;color:#3d5664}.bc2-editable[contenteditable=true]{outline:1px dashed transparent;border-radius:2px;transition:outline-color .15s,background .15s}.bc2-editable[contenteditable=true]:hover{outline-color:#80b9d4;background:#f4fbff}.bc2-editable[contenteditable=true]:focus{outline:2px solid #0d82d8;background:#fff;box-shadow:0 0 0 2px rgba(13,130,216,.08)}",
+      "#bc2EditorBar{position:fixed;z-index:1000002;left:50%;top:10px;transform:translateX(-50%);display:flex;align-items:center;gap:8px;max-width:calc(100vw - 20px);padding:8px 10px;background:#0b3553;color:#fff;border-radius:12px;box-shadow:0 6px 22px rgba(0,0,0,.22);font:13px/1.25 Arial,sans-serif}#bc2EditorBar .bc2-editor-note{font-weight:700;margin-right:6px;white-space:nowrap}#bc2EditorBar button{border:0;border-radius:8px;padding:8px 11px;font-weight:700;cursor:pointer}#bc2EditorBar .bc2-print{background:#fff;color:#073158}#bc2EditorBar .bc2-reset{background:#dcedf6;color:#073158}#bc2EditorBar .bc2-close{background:#ffe7e5;color:#8b201b}",
+      "@media screen{body.customer-report-v2 #customerReportV2Root{box-shadow:0 0 30px rgba(0,0,0,.12);margin-top:64px;margin-bottom:70px}.download-close-btn{display:none!important}}",
+      "@media print{@page{size:A4;margin:8mm 9mm}body.customer-report-v2 #customerReportV2Root{display:block!important;max-width:none!important;margin:0!important;padding:0!important}body.customer-report-v2>.app-shell,body.customer-report-v2 .download-close-btn,#bc2EditorBar,.bc2-photo-exclude{display:none!important}.bc2-editable[contenteditable=true]{outline:0!important;background:transparent!important;box-shadow:none!important}.bc2-finding{break-inside:auto}.bc2-finding-head,.bc2-block{break-inside:avoid}.bc2-inline-photo-grid img{height:56mm}}"
     ].join("\n");
     document.head.appendChild(style);
   }
@@ -355,7 +464,7 @@
     if (typeof window.refreshSummary === "function") window.refreshSummary(true);
 
     var allFindings = typeof window.collectFindings === "function" ? window.collectFindings() : [];
-    var findings = filterClientFindings(allFindings);
+    var findings = suppressDuplicateClientFindings(filterClientFindings(allFindings));
     var groups = groupClientFindings(findings);
     var photos = buildPhotoRegistry();
     var findingsHtml = renderFindings(groups, photos);
@@ -388,20 +497,91 @@
     }));
   }
 
+  function enableReportEditing(root) {
+    if (!root) return;
+    var selectors = [
+      ".bc2-kicker",
+      ".bc2-brand h1",
+      ".bc2-brand p",
+      ".bc2-meta td",
+      ".bc2-section>h2",
+      ".bc2-intro",
+      ".bc2-finding-head strong",
+      ".bc2-finding-head small",
+      ".bc2-block p:not(.bc2-source)",
+      ".bc2-block li",
+      ".bc2-inline-photo-grid figcaption",
+      ".bc2-guidance h2",
+      ".bc2-guidance p",
+      ".bc2-next h2",
+      ".bc2-next li"
+    ];
+
+    Array.prototype.slice.call(root.querySelectorAll(selectors.join(","))).forEach(function (el) {
+      el.setAttribute("contenteditable", "true");
+      el.setAttribute("spellcheck", "true");
+      el.classList.add("bc2-editable");
+    });
+
+    Array.prototype.slice.call(root.querySelectorAll(".bc2-photo-exclude")).forEach(function (button) {
+      button.addEventListener("click", function () {
+        var figure = button.closest("figure");
+        var grid = button.closest(".bc2-inline-photo-grid");
+        var block = button.closest(".bc2-evidence");
+        if (figure) figure.remove();
+        if (grid && !grid.querySelector("figure") && block) block.remove();
+      });
+    });
+  }
+
+  function removeEditorBar() {
+    var bar = document.getElementById("bc2EditorBar");
+    if (bar) bar.remove();
+  }
+
+  function ensureEditorBar() {
+    removeEditorBar();
+    var bar = document.createElement("div");
+    bar.id = "bc2EditorBar";
+    bar.innerHTML =
+      '<span class="bc2-editor-note">Report preview — click text to edit</span>' +
+      '<button class="bc2-print" type="button">Print / Save PDF</button>' +
+      '<button class="bc2-reset" type="button">Reset generated wording</button>' +
+      '<button class="bc2-close" type="button">Close</button>';
+
+    bar.querySelector(".bc2-print").addEventListener("click", function () {
+      var root = document.getElementById("customerReportV2Root");
+      waitForReportImages(root).then(function () {
+        window.setTimeout(function () { window.print(); }, 60);
+      });
+    });
+
+    bar.querySelector(".bc2-reset").addEventListener("click", function () {
+      var root = buildReport();
+      enableReportEditing(root);
+      window.scrollTo(0, 0);
+    });
+
+    bar.querySelector(".bc2-close").addEventListener("click", function () {
+      window.closeDownloadMode();
+    });
+
+    document.body.appendChild(bar);
+  }
+
   window.enterDownloadMode = function () {
     var reportRoot = buildReport();
     document.body.classList.remove("compact-report-mode");
     document.body.classList.add("download-mode", "customer-report-v2");
-    if (typeof window.ensureDownloadCloseButton === "function") window.ensureDownloadCloseButton();
     var closeBtn = document.getElementById("downloadCloseBtn");
-    if (closeBtn) closeBtn.hidden = false;
+    if (closeBtn) closeBtn.hidden = true;
+    enableReportEditing(reportRoot);
+    ensureEditorBar();
     window.scrollTo(0, 0);
-    waitForReportImages(reportRoot).then(function () {
-      window.setTimeout(function () { window.print(); }, 60);
-    });
   };
 
   window.closeDownloadMode = function () {
+    removeEditorBar();
     var root = document.getElementById("customerReportV2Root");
     if (root) root.remove();
     document.body.classList.remove("customer-report-v2");
