@@ -3,7 +3,7 @@
 (function () {
   "use strict";
 
-  var REPORT_VERSION = "20261005.5";
+  var REPORT_VERSION = "20261005.6";
   var priorCloseDownloadMode = window.closeDownloadMode;
   var CLIENT_REPORT_HIDDEN_FINDING_IDS = [
     "overall-result-fail",
@@ -331,7 +331,7 @@
     return clean(String(value || "").replace(/\{item\}/g, item || "this inspection area"));
   }
 
-  function renderFindingGroup(group, index, photos) {
+  function renderFindingGroup(group, index, photos, prefix) {
     var details = (group.findings || []).map(ruleDetails);
     if (!details.length) return "";
 
@@ -370,7 +370,7 @@
     var notes = uniqueStrings(details.map(function (detail) { return detail.finding.inspectorNotes; }));
 
     return '<article class="bc2-finding" data-report-group="' + esc(group.key) + '"' + (scenario ? ' data-report-scenario="' + esc(scenario.id) + '"' : '') + '>' +
-      '<div class="bc2-finding-head"><span>F' + String(index + 1).padStart(2, "0") + '</span><div><strong>' + esc(title) + '</strong>' + (subTitle ? '<small>' + esc(subTitle) + '</small>' : '') + '</div></div>' +
+      '<div class="bc2-finding-head"><span>' + esc(prefix || "F") + String(index + 1).padStart(2, "0") + '</span><div><strong>' + esc(title) + '</strong>' + (subTitle ? '<small>' + esc(subTitle) + '</small>' : '') + '</div></div>' +
       '<div class="bc2-block"><b>What needs attention</b>' + problemHtml + '</div>' +
       '<div class="bc2-block"><b>Why this matters</b>' + (whyItems.length === 1 ? '<p>' + esc(whyItems[0]) + '</p>' : listHtml(whyItems)) + '</div>' +
       '<div class="bc2-block"><b>Requirement</b>' + (requirementItems.length === 1 ? '<p>' + esc(requirementItems[0]) + '</p>' : listHtml(requirementItems)) +
@@ -382,13 +382,15 @@
     '</article>';
   }
 
-  function renderFindings(groups, photos) {
-    if (!groups.length) {
-      return '<section class="bc2-section"><h2>Inspection outcome</h2><div class="bc2-compliant"><strong>No non-compliance findings were generated from the recorded inspection.</strong><p>The detailed inspection record remains stored in BarrierCheck.</p></div></section>';
-    }
-    return '<section class="bc2-section"><h2>Items requiring attention</h2><p class="bc2-intro">Where recorded failures describe the same underlying condition, BarrierCheck combines them into one client-facing issue. Independent defects remain separate.</p>' +
-      groups.map(function (group, index) { return renderFindingGroup(group, index, photos); }).join("") +
+  function renderFindingSection(groups, photos, title, intro, prefix) {
+    if (!groups.length) return "";
+    return '<section class="bc2-section"><h2>' + esc(title) + '</h2><p class="bc2-intro">' + esc(intro) + '</p>' +
+      groups.map(function (group, index) { return renderFindingGroup(group, index, photos, prefix); }).join("") +
     '</section>';
+  }
+
+  function renderNoFindings() {
+    return '<section class="bc2-section"><h2>Inspection outcome</h2><div class="bc2-compliant"><strong>No non-compliance findings were generated from the recorded inspection.</strong><p>The detailed inspection record remains stored in BarrierCheck.</p></div></section>';
   }
 
   function reportHeader(findings) {
@@ -465,9 +467,38 @@
 
     var allFindings = typeof window.collectFindings === "function" ? window.collectFindings() : [];
     var findings = filterClientFindings(allFindings);
-    var groups = groupClientFindings(findings);
+    var barrierFindings = findings.filter(function (finding) { return finding.category !== "referral" && finding.category !== "administrative"; });
+    var referralFindings = findings.filter(function (finding) { return finding.category === "referral"; });
+    var administrativeFindings = findings.filter(function (finding) { return finding.category === "administrative"; });
+
+    var barrierGroups = groupClientFindings(barrierFindings);
+    var referralGroups = groupClientFindings(referralFindings);
+    var administrativeGroups = groupClientFindings(administrativeFindings);
+    var groups = barrierGroups.concat(referralGroups, administrativeGroups);
     var photos = buildPhotoRegistry();
-    var findingsHtml = renderFindings(groups, photos);
+    var findingsHtml = findings.length
+      ? renderFindingSection(
+          barrierGroups,
+          photos,
+          "Pool barrier items requiring rectification",
+          "Where recorded failures describe the same underlying physical condition, BarrierCheck combines them into one client-facing issue. Independent defects remain separate.",
+          "F"
+        ) +
+        renderFindingSection(
+          referralGroups,
+          photos,
+          "Other safety / specialist referrals",
+          "These observations are recorded separately because they may require another qualified practitioner and are not, by themselves, additional pool-barrier nonconformities.",
+          "R"
+        ) +
+        renderFindingSection(
+          administrativeGroups,
+          photos,
+          "Administrative / process actions",
+          "These items relate to certification, register or inspection-process actions rather than a separate physical barrier defect.",
+          "A"
+        )
+      : renderNoFindings();
 
     var root = document.createElement("main");
     root.id = "customerReportV2Root";
