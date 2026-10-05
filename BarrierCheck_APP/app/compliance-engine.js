@@ -238,6 +238,15 @@
     )
   };
 
+  RULES.highBarrier = sourceRule(
+    "qld-mesh-high-barrier-ncz-exception",
+    "Fence",
+    "The QDC MP 3.4 NCZ/clear-area exception applies only to the qualifying mesh/perforated fence arrangements: at least 2400mm high, or at least 1800mm with the prescribed compliant cranked top.",
+    "The recorded high-barrier/cranked-top arrangement does not satisfy the construction and height conditions for the NCZ/clear-area exception.",
+    "Relying on an inapplicable NCZ exception can leave climbable access around the barrier.",
+    "Use the ordinary NCZ/clear-area requirements, or rectify and verify the qualifying mesh/perforated high-barrier arrangement."
+  );
+
   RULES.buildingWork = sourceRule(
     "qld-building-work-barrier",
     "Temporary Fencing / Building Work",
@@ -282,6 +291,7 @@
     aboveGroundAccess: "AS 1926.1-2007 cl 2.10; QDC MP 3.4 Schedule 1 modification 21",
     decommissioning: "Queensland PSI guideline 2024, Decommissioning pools / Pools converted to fishponds",
     temporaryExpired: "QDC MP 3.4 Schedule 1 modifications 3-4; Queensland PSI guideline 2024, Temporary fencing",
+    highBarrier: "QDC MP 3.4 Schedule 1 modification 12 (AS 1926.1-2007 cl 2.3.2)",
     buildingWork: "Queensland PSI guideline 2024, Temporary fencing / minor repairs and maintenance",
     certificateReady: "Queensland PSI guideline 2024, Conformity and being reasonably satisfied",
     ownerAdvice: "Queensland PSI guideline 2024, Nonconformity"
@@ -459,10 +469,19 @@
 
     if (el.name === "fenceNCZClear" && card && card.matches('[data-section="fence"]')) {
       var arrangement = value(card, "fenceHighBarrierArrangement");
-      var arrangementCompliant = value(card, "fenceHighBarrierArrangementCompliant");
-      if (arrangement && arrangement !== "None" && arrangementCompliant === "Pass") {
-        return decisionResult(el, "na", RULES.fenceHeight, {
-          decisionBasis: "Recorded qualifying high-barrier/cranked-top arrangement removes the ordinary NCZ/clear-area requirement for this fence construction."
+      if (arrangement && arrangement !== "None") {
+        var arrangementCompliant = value(card, "fenceHighBarrierArrangementCompliant");
+        var highType = value(card, "fenceType").toLowerCase();
+        var highHeight = num(value(card, "fenceHeight"));
+        var meshConstruction = /mesh|chainwire|perforat/.test(highType);
+        var heightQualifies =
+          (arrangement === "2400mm or more qualifying fence" && highHeight !== null && highHeight >= 2400) ||
+          (arrangement === "1800mm or more with compliant cranked top" && highHeight !== null && highHeight >= 1800);
+        var highPass = meshConstruction && heightQualifies && arrangementCompliant === "Pass";
+        return decisionResult(el, highPass ? "na" : "fail", RULES.highBarrier, {
+          decisionBasis: highPass
+            ? "Qualifying mesh/perforated construction, required recorded height and compliant high-barrier/cranked-top arrangement are all present."
+            : "The selected NCZ exception requires qualifying mesh/perforated construction, the applicable minimum height and a compliant recorded arrangement."
         });
       }
     }
@@ -665,6 +684,20 @@
       }
       if (value(card, "fenceStrengthRigid") === "Pass" && !value(card, "fenceStrengthAssessmentMethod")) {
         add("strength-method-missing", "Fence Section " + (index + 1), "Strength/rigidity is marked Pass but the assessment method has not been recorded.");
+      }
+    });
+
+    document.querySelectorAll('.fence-card[data-section="fence"]').forEach(function (card, index) {
+      var arrangement = value(card, "fenceHighBarrierArrangement");
+      if (!arrangement || arrangement === "None") return;
+      var type = value(card, "fenceType").toLowerCase();
+      var height = num(value(card, "fenceHeight"));
+      var materialOk = /mesh|chainwire|perforat/.test(type);
+      var heightOk =
+        (arrangement === "2400mm or more qualifying fence" && height !== null && height >= 2400) ||
+        (arrangement === "1800mm or more with compliant cranked top" && height !== null && height >= 1800);
+      if (!materialOk || !heightOk) {
+        add("high-barrier-exception-inapplicable", "Fence Section " + (index + 1), "The NCZ/clear-area exception has been selected but the recorded mesh/perforated construction and/or required effective height does not support that exception.");
       }
     });
 
