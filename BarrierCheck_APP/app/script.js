@@ -4723,6 +4723,7 @@ function retainingWallTemplate(number) {
       '<label class="field"><span>Height / level change (mm)</span><input data-save name="retainingWallHeight" type="number" placeholder="500" /></label>' +
       '<label class="field"><span>Distance from barrier (mm)</span><input data-save name="retainingWallDistance" type="number" placeholder="900" /></label>' +
       '<label class="field"><span>Relative to pool level</span><select data-save name="retainingWallRelativeLevel"><option value=""></option><option>Above pool level</option><option>Below pool level</option><option>Other</option></select></label>' +
+      '<label class="field"><span>Slope direction</span><select data-save name="retainingWallSlopeDirection"><option value=""></option><option>Vertical</option><option>Away from pool</option><option>Toward pool</option></select></label>' +
       '<label class="field"><span>Slope from vertical (degrees)</span><input data-save name="retainingWallSlopeDegrees" type="number" step="0.1" placeholder="0" /></label>' +
       '<label class="field"><span>No prohibited handholds / footholds</span><select data-save name="retainingWallNoFootholds"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
       '<label class="field"><span>Exposed face / NCZ barrier compliant</span><select data-save name="retainingWallFaceBarrierCompliant"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
@@ -4892,11 +4893,14 @@ function barrierDoorTemplate(number) {
     '<div class="fence-card-head"><h3>Door / Building Access Check ' + number + '</h3><button class="remove-section-btn" type="button">Remove</button></div>' +
     '<div class="form-grid">' +
       '<label class="field full"><span>Location</span><input data-save name="barrierDoorLocation" type="text" placeholder="e.g. Patio sliding door" /></label>' +
-      '<label class="field"><span>Access Type</span><select data-save name="barrierDoorType"><option value=""></option><option>Door</option><option>Sliding door</option><option>Pet door</option><option>Building wall</option><option>Other</option></select></label>' +
+      '<label class="field"><span>Access Type</span><select data-save name="barrierDoorType"><option value=""></option><option>Door</option><option>Sliding door</option><option>Garage door</option><option>Pet door</option><option>Building wall</option><option>Other</option></select></label>' +
       '<label class="field"><span>Formal authority applies to this door arrangement</span><select data-save name="barrierDoorAuthorityApplies"><option value=""></option><option>No</option><option>Yes</option></select></label>' +
       '<label class="field"><span>Opens away from pool</span><select data-save name="barrierDoorOpensAway"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
       '<label class="field"><span>Latch release height inside building (mm)</span><input data-save name="barrierDoorLatchReleaseHeight" type="number" placeholder="1500" /></label>' +
       '<label class="field"><span>No footholds &gt;10mm below 1000mm</span><select data-save name="barrierDoorNoFootholds"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
+      '<label class="field"><span>Door construction / openings / finish compliant</span><select data-save name="barrierDoorConstructionCompliant"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
+      '<label class="field"><span>Door strength / rigidity compliant</span><select data-save name="barrierDoorStrengthCompliant"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
+      '<label class="field"><span>Garage-door fail-safe on power / mechanism failure</span><select data-save name="barrierDoorGarageFailSafe"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
       '<label class="field"><span>Self-closing</span><select data-save name="barrierDoorSelfClosing"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
       '<label class="field"><span>Self-latching</span><select data-save name="barrierDoorSelfLatching"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
       '<label class="field"><span>Direct access controlled</span><select data-save name="barrierDoorCompliant"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
