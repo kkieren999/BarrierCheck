@@ -438,6 +438,14 @@
     if (el.name === "fenceHeight" && card && card.matches('[data-section="fence"]')) {
       var height = num(el.value);
       if (height === null) return null;
+      if (height < 1200) {
+        return decisionResult(el, "fail", RULES.fenceHeight, {
+          value: height,
+          threshold: 1200,
+          decisionBasis: "No recorded fence-construction branch permits an effective height below 1200mm.",
+          issue: "The recorded effective height is " + height + "mm, below the minimum 1200mm base requirement."
+        });
+      }
       var needed = fenceRequiredHeightFacts({
         type: value(card, "fenceType"),
         aperture: value(card, "fenceApertureSize")
@@ -458,12 +466,21 @@
       if (aperture === null) return null;
       var top = value(card, "fenceMeshTopStrainer");
       var bottom = value(card, "fenceMeshBottomStrainer");
-      var pass = aperture <= 100 && top === "Pass" && bottom === "Pass";
+      if (aperture > 100) {
+        return decisionResult(el, "fail", RULES.meshAperture, {
+          value: aperture,
+          threshold: 100,
+          decisionBasis: "Mesh/perforated aperture greater than 100mm is not permitted.",
+          issue: "The recorded mesh/perforated aperture is greater than 100mm."
+        });
+      }
+      if (!top || !bottom) return null;
+      var pass = top === "Pass" && bottom === "Pass";
       return decisionResult(el, pass ? "pass" : "fail", RULES.meshAperture, {
         value: aperture,
         threshold: 100,
-        decisionBasis: pass ? "Aperture <=100mm and top/bottom strainer support recorded compliant." : "Mesh/perforated barrier requires aperture <=100mm and top/bottom strainer wire/rail support.",
-        issue: aperture > 100 ? "The recorded mesh/perforated aperture is greater than 100mm." : "The aperture is within 100mm, but required top/bottom strainer support is not recorded as compliant."
+        decisionBasis: pass ? "Aperture <=100mm and top/bottom strainer support recorded compliant." : "Mesh/perforated barrier requires compliant top and bottom strainer wire/rail support.",
+        issue: "The aperture is within 100mm, but required top/bottom strainer support is not recorded as compliant."
       });
     }
 
@@ -477,6 +494,7 @@
         var heightQualifies =
           (arrangement === "2400mm or more qualifying fence" && highHeight !== null && highHeight >= 2400) ||
           (arrangement === "1800mm or more with compliant cranked top" && highHeight !== null && highHeight >= 1800);
+        if (meshConstruction && heightQualifies && !arrangementCompliant) return null;
         var highPass = meshConstruction && heightQualifies && arrangementCompliant === "Pass";
         return decisionResult(el, highPass ? "na" : "fail", RULES.highBarrier, {
           decisionBasis: highPass
@@ -545,11 +563,21 @@
       }
       if (env === "Indoor" && /door/i.test(doorType)) {
         var latchHeight = num(value(card, "barrierDoorLatchReleaseHeight"));
+        var doorFacts = [
+          value(card, "barrierDoorSelfClosing"),
+          value(card, "barrierDoorSelfLatching"),
+          value(card, "barrierDoorOpensAway"),
+          value(card, "barrierDoorNoFootholds"),
+          value(card, "barrierDoorConstructionCompliant"),
+          value(card, "barrierDoorStrengthCompliant")
+        ];
+        if (latchHeight === null || doorFacts.some(function (fact) { return !fact; }) ||
+            (doorType === "Garage door" && !value(card, "barrierDoorGarageFailSafe"))) return null;
         var passDoor = doorType !== "Pet door" &&
           value(card, "barrierDoorSelfClosing") === "Pass" &&
           value(card, "barrierDoorSelfLatching") === "Pass" &&
           value(card, "barrierDoorOpensAway") === "Pass" &&
-          latchHeight !== null && latchHeight >= 1500 &&
+          latchHeight >= 1500 &&
           value(card, "barrierDoorNoFootholds") === "Pass" &&
           value(card, "barrierDoorConstructionCompliant") === "Pass" &&
           value(card, "barrierDoorStrengthCompliant") === "Pass" &&
@@ -655,15 +683,22 @@
 
     if (el.name === "certificateReadyToIssue") {
       if (!el.value || el.value === "N/A") return el.value === "N/A" ? decisionResult(el, "na", RULES.certificateReady, {}) : null;
+      if (el.value === "No" && value(document, "overallInspectionResult") === "Pending") return null;
       return decisionResult(el, el.value === "Yes" ? "pass" : "fail", RULES.certificateReady, {
-        decisionBasis: "Certificate readiness is recorded as Yes/No."
+        decisionBasis: "Certificate readiness is recorded as Yes/No after the overall inspection outcome is determined."
       });
     }
 
     if (el.name === "ownerAdvisedActions") {
       if (!el.value || el.value === "N/A") return el.value === "N/A" ? decisionResult(el, "na", RULES.ownerAdvice, {}) : null;
+      var actionsRequired = value(document, "overallInspectionResult") === "Fail" ||
+        value(document, "nonconformityNoticeRequired") === "Yes" ||
+        value(document, "reinspectionRequired") === "Yes";
+      if (!actionsRequired && el.value === "No") return decisionResult(el, "na", RULES.ownerAdvice, {
+        decisionBasis: "No required rectification/reinspection action is currently recorded."
+      });
       return decisionResult(el, el.value === "Yes" ? "pass" : "fail", RULES.ownerAdvice, {
-        decisionBasis: "Owner advice status is recorded as Yes/No."
+        decisionBasis: "Owner advice is required because rectification, notice or reinspection action is recorded."
       });
     }
 
@@ -698,6 +733,8 @@
         (arrangement === "1800mm or more with compliant cranked top" && height !== null && height >= 1800);
       if (!materialOk || !heightOk) {
         add("high-barrier-exception-inapplicable", "Fence Section " + (index + 1), "The NCZ/clear-area exception has been selected but the recorded mesh/perforated construction and/or required effective height does not support that exception.");
+      } else if (!value(card, "fenceHighBarrierArrangementCompliant")) {
+        add("high-barrier-exception-evidence-incomplete", "Fence Section " + (index + 1), "The qualifying high-barrier/cranked-top path is selected but its compliance assessment has not been completed.");
       }
     });
 
@@ -713,6 +750,10 @@
     });
 
     document.querySelectorAll(".gate-card").forEach(function (card, index) {
+      if (value(card, "gateType") === "Double leaf gate" &&
+          (!value(card, "gateInactiveLeafPermanentlyFixed") || !value(card, "gateEachLeafSelfClosingLatching"))) {
+        add("double-leaf-evidence-incomplete", "Gate " + (index + 1), "Double-leaf gate requires the permanent-fixing/central-fixture and operable-leaf self-closing/self-latching evidence.");
+      }
       var latch = num(value(card, "gateLatchHeight"));
       if (latch !== null && latch < 1500) {
         var evidence = [
@@ -782,6 +823,14 @@
       });
       if (value(card, "balconyBarrierCompliant") === "Pass" && bal.status === "incomplete") {
         add("balcony-composite-incomplete", "Balcony Check " + (index + 1), "Balcony is marked Pass but the measured drop/proximity or protection-method evidence is incomplete.");
+      }
+    });
+
+    document.querySelectorAll(".special-pool-feature-card").forEach(function (card, index) {
+      var feature = value(card, "specialPoolFeatureType");
+      if ((feature === "Above-ground pool" || feature === "Inflatable pool") &&
+          !value(card, "designatedPoolAccessPointCompliant")) {
+        add("aboveground-access-incomplete", "Special Pool Feature " + (index + 1), "Record whether the designated pool access point is enclosed by a compliant barrier and gate.");
       }
     });
 
