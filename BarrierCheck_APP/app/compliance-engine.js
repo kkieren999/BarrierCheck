@@ -236,8 +236,11 @@
   function fenceRequiredHeightFacts(facts) {
     var aperture = num(facts.aperture);
     var type = clean(facts.type).toLowerCase();
-    if (/mesh|chainwire|perforat/.test(type) && aperture !== null && aperture > 13 && aperture <= 100) {
-      return { status: "known", threshold: 1800, basis: "Mesh/perforated aperture >13mm and <=100mm requires at least 1800mm effective height." };
+    if (/mesh|chainwire|perforat/.test(type)) {
+      if (aperture === null) return { status: "incomplete", basis: "Mesh/perforated aperture must be recorded before the required effective height can be derived." };
+      if (aperture > 100) return { status: "known", threshold: 1800, apertureFail: true, basis: "Mesh/perforated aperture is greater than 100mm and is not permitted." };
+      if (aperture > 13) return { status: "known", threshold: 1800, basis: "Mesh/perforated aperture >13mm and <=100mm requires at least 1800mm effective height." };
+      return { status: "known", threshold: 1200, basis: "Mesh/perforated aperture <=13mm requires at least 1200mm effective height." };
     }
     return { status: "known", threshold: 1200, basis: "General effective-height requirement is at least 1200mm for this recorded construction." };
   }
@@ -360,6 +363,7 @@
         type: value(card, "fenceType"),
         aperture: value(card, "fenceApertureSize")
       });
+      if (needed.status === "incomplete") return null;
       return decisionResult(el, height >= needed.threshold ? "pass" : "fail", RULES.fenceHeight, {
         value: height,
         threshold: needed.threshold,
@@ -713,11 +717,20 @@
     });
   }
 
+  var DERIVED_OWNED_FIELDS = {
+    fenceHeight: true,
+    fenceApertureSize: true,
+    boundaryFenceHeight: true,
+    nczDistance: true,
+    waterBarrierDepth: true
+  };
+
   var baseEvaluate = window.evaluateComplianceForElement;
   if (typeof baseEvaluate === "function") {
     window.evaluateComplianceForElement = function (el) {
       var custom = customEvaluate(el);
       if (custom) return custom;
+      if (el && DERIVED_OWNED_FIELDS[el.name]) return null;
       return baseEvaluate.apply(this, arguments);
     };
   }
