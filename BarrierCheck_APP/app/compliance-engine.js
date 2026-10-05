@@ -46,7 +46,12 @@
     var type = value(document, "specialAuthorityType");
     var status = value(document, "specialAuthorityStatus");
     var reference = value(document, "specialAuthorityReference");
-    return !!(type && type !== "None / not applicable" && status === "Confirmed current" && reference);
+    if (!(type && type !== "None / not applicable" && status === "Confirmed current" && reference)) return false;
+    if (type === "Performance solution") {
+      return value(document, "specialAuthorityRegisteredOnPoolRegister") === "Yes" &&
+        !!value(document, "specialAuthorityForm17Reference");
+    }
+    return true;
   }
 
   function sourceRule(id, itemType, requirement, issue, risk, recommendation, category) {
@@ -233,6 +238,58 @@
     )
   };
 
+  RULES.buildingWork = sourceRule(
+    "qld-building-work-barrier",
+    "Temporary Fencing / Building Work",
+    "Building work must not compromise the pool barrier.",
+    "Building work was recorded as compromising the pool barrier.",
+    "Building work can create gaps or access points that allow a young child to enter the pool area.",
+    "Provide effective temporary controls and reinstate/rectify the barrier so pool access remains restricted."
+  );
+  RULES.certificateReady = sourceRule(
+    "certificate-ready-no",
+    "Inspection Outcome",
+    "A pool safety certificate should only be issued when the inspector is reasonably satisfied the regulated pool complies.",
+    "The pool safety certificate is recorded as not ready to issue.",
+    "Outstanding compliance or process items remain before certification.",
+    "Resolve outstanding items and complete any required reinspection before issuing the certificate.",
+    "administrative"
+  );
+  RULES.ownerAdvice = sourceRule(
+    "owner-advised-actions-no",
+    "Inspection Outcome",
+    "Required rectification and process actions should be clearly communicated and recorded.",
+    "The owner is recorded as not yet advised of required actions.",
+    "The owner may not understand the rectification or reinspection steps required.",
+    "Provide clear written advice and retain the communication in the inspection record.",
+    "administrative"
+  );
+
+  var RULE_SOURCE_REFS = {
+    fenceHeight: "AS 1926.1-2007 cl 2.1 and 2.3.2; QDC MP 3.4 Schedule 1 modifications",
+    meshAperture: "AS 1926.1-2007 cl 2.3.2; QDC MP 3.4 Schedule 1 modification 12",
+    boundary: "QDC MP 3.4 Schedule 1 modifications 6-10",
+    nczObject: "QDC MP 3.4 Schedule 1 modifications 6-10; 2024 PSI guideline NCZ guidance",
+    waterDepth: "QDC MP 3.4 Schedule 1 modification 17(a)",
+    waterComposite: "QDC MP 3.4 Schedule 1 modification 17",
+    outdoorDoor: "AS 1926.2-2007 cl 4.2 as modified by QDC MP 3.4; 2024 PSI guideline child-resistant doors",
+    indoorDoor: "AS 1926.1-2007 cl 2.8; QDC MP 3.4 Schedule 1 modifications 15, 18 and 26",
+    window: "AS 1926.1-2007 cl 2.7; QDC MP 3.4 Schedule 1 modification 26",
+    retainingWall: "AS 1926.1-2007 cl 2.6; QDC MP 3.4 Schedule 1 modification 16",
+    balcony: "AS 1926.1-2007 cl 2.9; QDC MP 3.4 Schedule 1 modifications 19-20",
+    chameleon: "Queensland PSI guideline 2024, Chameleon gates",
+    doubleLeaf: "Queensland PSI guideline 2024, Leaf (swing) gates",
+    aboveGroundAccess: "AS 1926.1-2007 cl 2.10; QDC MP 3.4 Schedule 1 modification 21",
+    decommissioning: "Queensland PSI guideline 2024, Decommissioning pools / Pools converted to fishponds",
+    temporaryExpired: "QDC MP 3.4 Schedule 1 modifications 3-4; Queensland PSI guideline 2024, Temporary fencing",
+    buildingWork: "Queensland PSI guideline 2024, Temporary fencing / minor repairs and maintenance",
+    certificateReady: "Queensland PSI guideline 2024, Conformity and being reasonably satisfied",
+    ownerAdvice: "Queensland PSI guideline 2024, Nonconformity"
+  };
+  Object.keys(RULE_SOURCE_REFS).forEach(function (key) {
+    if (RULES[key]) RULES[key].sourceRef = RULE_SOURCE_REFS[key];
+  });
+
   function fenceRequiredHeightFacts(facts) {
     var aperture = num(facts.aperture);
     var type = clean(facts.type).toLowerCase();
@@ -249,12 +306,23 @@
     var height = num(facts.height);
     if (height === null) return { status: "incomplete", basis: "Boundary height not recorded." };
     if (height < 1200) return { status: "fail", basis: "Boundary fence is below 1200mm." };
-    if (height >= 1800) return { status: "pass", basis: "Boundary fence is at least 1800mm; the applicable NCZ may be inside or outside." };
-    if (!facts.nczSide || !facts.clearArea) return { status: "incomplete", basis: "1200-1799mm boundary fence requires recorded outside NCZ and additional-clear-area assessment." };
-    if (facts.nczSide === "Outside pool area" && facts.clearArea === "Pass") {
-      return { status: "pass", basis: "Boundary fence is at least 1200mm, below 1800mm, with the NCZ outside and additional clear area maintained." };
+    if (!facts.nczSide || facts.nczSide === "Both / requires assessment") {
+      return { status: "incomplete", basis: "Record the NCZ side being relied upon before the boundary-fence decision is complete." };
     }
-    return { status: "fail", basis: "Boundary fence between 1200mm and 1799mm does not have the required outside NCZ/additional clear area recorded as compliant." };
+    if (height < 1800) {
+      if (!facts.clearArea) return { status: "incomplete", basis: "A 1200-1799mm boundary fence requires the outside NCZ and additional-clear-area assessment." };
+      if (facts.nczSide === "Outside pool area" && facts.clearArea === "Pass") {
+        return { status: "pass", basis: "Boundary fence is at least 1200mm, below 1800mm, with the NCZ outside and additional clear area maintained." };
+      }
+      return { status: "fail", basis: "A boundary fence between 1200mm and 1799mm must use the outside NCZ with the additional clear area maintained." };
+    }
+    if (facts.nczSide === "Outside pool area") {
+      if (!facts.clearArea) return { status: "incomplete", basis: "Outside NCZ requires the additional-clear-area assessment." };
+      return facts.clearArea === "Pass"
+        ? { status: "pass", basis: "Boundary fence is at least 1800mm, outside NCZ selected and additional clear area maintained." }
+        : { status: "fail", basis: "Outside NCZ is selected but the additional clear area is not compliant." };
+    }
+    return { status: "pass", basis: "Boundary fence is at least 1800mm with the inside NCZ selected." };
   }
 
   function waterFacts(facts) {
@@ -308,17 +376,18 @@
     var relation = facts.relativeLevel;
     var height = num(facts.height);
     var slope = num(facts.slope);
-    if (!relation || height === null || slope === null) return { status: "incomplete", basis: "Retaining-wall relative level, height and slope are required." };
+    var direction = facts.slopeDirection;
+    if (!relation || height === null || slope === null || !direction) return { status: "incomplete", basis: "Retaining-wall relative level, height, slope direction and slope angle are required." };
 
     if (relation === "Above pool level") {
       if (height < 1800) return { status: "fail", basis: "Retaining wall above pool level is below 1800mm effective height." };
-      if (slope > 15) return { status: "fail", basis: "Retaining wall above pool level slopes away from the pool by more than 15 degrees." };
+      if (direction === "Away from pool" && slope > 15) return { status: "fail", basis: "Retaining wall above pool level slopes away from the pool by more than 15 degrees." };
       if (facts.noFootholds !== "Pass") return { status: "fail", basis: "Top 900mm/NCZ handhold-footing condition is not recorded as compliant." };
       return { status: "pass", basis: "Above-pool retaining wall height, slope and climbability conditions are recorded compliant." };
     }
 
     if (relation === "Below pool level") {
-      if (slope > 15) return { status: "fail", basis: "Retaining wall below pool level slopes toward the pool by more than 15 degrees." };
+      if (direction === "Toward pool" && slope > 15) return { status: "fail", basis: "Retaining wall below pool level slopes toward the pool by more than 15 degrees." };
       if (!(height >= 1800 || facts.faceBarrier === "Pass")) {
         return { status: "fail", basis: "Below-pool wall needs 1800mm effective height including NCZ or an otherwise compliant exposed-face barrier arrangement." };
       }
@@ -462,7 +531,10 @@
           value(card, "barrierDoorSelfLatching") === "Pass" &&
           value(card, "barrierDoorOpensAway") === "Pass" &&
           latchHeight !== null && latchHeight >= 1500 &&
-          value(card, "barrierDoorNoFootholds") === "Pass";
+          value(card, "barrierDoorNoFootholds") === "Pass" &&
+          value(card, "barrierDoorConstructionCompliant") === "Pass" &&
+          value(card, "barrierDoorStrengthCompliant") === "Pass" &&
+          (doorType !== "Garage door" || value(card, "barrierDoorGarageFailSafe") === "Pass");
         return decisionResult(el, passDoor ? "pass" : "fail", RULES.indoorDoor, {
           decisionBasis: passDoor ? "Indoor doorset closing, latching, swing, latch height and foothold conditions are recorded compliant." : "One or more required indoor child-resistant doorset conditions are not satisfied."
         });
@@ -488,6 +560,7 @@
       var rw = retainingFacts({
         relativeLevel: value(card, "retainingWallRelativeLevel"),
         height: value(card, "retainingWallHeight"),
+        slopeDirection: value(card, "retainingWallSlopeDirection"),
         slope: value(card, "retainingWallSlopeDegrees"),
         noFootholds: value(card, "retainingWallNoFootholds"),
         faceBarrier: value(card, "retainingWallFaceBarrierCompliant"),
@@ -553,6 +626,28 @@
       });
     }
 
+    if (el.name === "buildingWorkAffectingBarrier" && card && card.classList.contains("temporary-fence-card")) {
+      if (!el.value) return null;
+      if (el.value === "N/A") return decisionResult(el, "na", RULES.buildingWork, { decisionBasis: "Building-work barrier check recorded not applicable." });
+      return decisionResult(el, el.value === "Pass" ? "pass" : "fail", RULES.buildingWork, {
+        decisionBasis: "Field is stated positively: Pass means building work does not compromise the barrier."
+      });
+    }
+
+    if (el.name === "certificateReadyToIssue") {
+      if (!el.value || el.value === "N/A") return el.value === "N/A" ? decisionResult(el, "na", RULES.certificateReady, {}) : null;
+      return decisionResult(el, el.value === "Yes" ? "pass" : "fail", RULES.certificateReady, {
+        decisionBasis: "Certificate readiness is recorded as Yes/No."
+      });
+    }
+
+    if (el.name === "ownerAdvisedActions") {
+      if (!el.value || el.value === "N/A") return el.value === "N/A" ? decisionResult(el, "na", RULES.ownerAdvice, {}) : null;
+      return decisionResult(el, el.value === "Yes" ? "pass" : "fail", RULES.ownerAdvice, {
+        decisionBasis: "Owner advice status is recorded as Yes/No."
+      });
+    }
+
     return null;
   }
 
@@ -598,10 +693,86 @@
       }
     });
 
+    document.querySelectorAll(".water-barrier-card").forEach(function (card, index) {
+      var wf = waterFacts({
+        depth: value(card, "waterBarrierDepth"),
+        width: value(card, "waterBarrierWidth"),
+        accessBlocked: value(card, "waterBarrierAccessBlocked"),
+        returnOverhang: value(card, "waterBarrierReturnOverhang"),
+        returnSurface: value(card, "waterBarrierReturnSurfaceCompliant")
+      });
+      if (value(card, "waterBarrierCompliant") === "Pass" && wf.status === "incomplete") {
+        add("water-composite-incomplete", "Permanent Body of Water " + (index + 1), "Water barrier is marked Pass but the required depth, width, access or return/overhang facts are incomplete.");
+      }
+    });
+
+    document.querySelectorAll(".barrier-window-card").forEach(function (card, index) {
+      var w = windowFacts({
+        externalSill: value(card, "barrierWindowExternalSillHeight"),
+        internalSill: value(card, "barrierWindowInternalSillHeight"),
+        method: value(card, "barrierWindowMethod"),
+        maxOpening: value(card, "barrierWindowMaxOpening"),
+        tools: value(card, "barrierWindowFixingsRequireTools"),
+        screen: value(card, "barrierWindowScreenBarsMeshFixed"),
+        strength: value(card, "barrierWindowStrengthCompliant")
+      });
+      if (value(card, "barrierWindowCompliant") === "Pass" && w.status === "incomplete") {
+        add("window-composite-incomplete", "Window Check " + (index + 1), "Window is marked Pass but the sill geometry or child-resistant method evidence is incomplete.");
+      }
+    });
+
+    document.querySelectorAll(".retaining-wall-card").forEach(function (card, index) {
+      if (value(card, "retainingWallType") !== "Retaining wall") return;
+      var rw = retainingFacts({
+        relativeLevel: value(card, "retainingWallRelativeLevel"),
+        height: value(card, "retainingWallHeight"),
+        slopeDirection: value(card, "retainingWallSlopeDirection"),
+        slope: value(card, "retainingWallSlopeDegrees"),
+        noFootholds: value(card, "retainingWallNoFootholds"),
+        faceBarrier: value(card, "retainingWallFaceBarrierCompliant"),
+        intersection: value(card, "retainingWallFenceIntersection"),
+        returnOverhang: value(card, "retainingWallReturnOverhang"),
+        returnSurface: value(card, "retainingWallReturnSurfaceCompliant")
+      });
+      if (value(card, "retainingWallCompliant") === "Pass" && rw.status === "incomplete") {
+        add("retaining-composite-incomplete", "Retaining Wall " + (index + 1), "Retaining wall is marked Pass but the branch-specific height/slope/intersection evidence is incomplete.");
+      }
+    });
+
+    document.querySelectorAll(".balcony-card").forEach(function (card, index) {
+      var bal = balconyFacts({
+        drop: value(card, "balconyDropHeight"),
+        proximity: value(card, "balconyDistanceToBarrierTop"),
+        method: value(card, "balconyProtectionMethod"),
+        balustrade: value(card, "balconyBalustradeCompliant"),
+        ncz: value(card, "balconyNczCompliant")
+      });
+      if (value(card, "balconyBarrierCompliant") === "Pass" && bal.status === "incomplete") {
+        add("balcony-composite-incomplete", "Balcony Check " + (index + 1), "Balcony is marked Pass but the measured drop/proximity or protection-method evidence is incomplete.");
+      }
+    });
+
+    document.querySelectorAll(".decommissioned-pool-card").forEach(function (card, index) {
+      if (value(card, "convertedPoolUse") === "Yes" && !/^(Yes|No)$/.test(value(card, "decommissioningFinalApprovalConfirmed"))) {
+        add("decommissioning-approval-incomplete", "Decommissioned / Converted Pool " + (index + 1), "A conversion is recorded but final approval confirming the structure is no longer a swimming pool has not been decided.");
+      }
+    });
+
+    document.querySelectorAll(".temporary-fence-card").forEach(function (card, index) {
+      if (value(card, "temporaryFencingPresent") === "Pass" &&
+          (!value(card, "temporaryFenceApprovalDate") || !value(card, "temporaryFenceApprovalReference"))) {
+        add("temporary-fence-authority-incomplete", "Temporary Fencing " + (index + 1), "Temporary fencing is being relied upon but approval/inspection date or documentary reference is incomplete.");
+      }
+    });
+
     var authorityType = value(document, "specialAuthorityType");
     if (authorityType && authorityType !== "None / not applicable") {
       if (value(document, "specialAuthorityStatus") !== "Confirmed current" || !value(document, "specialAuthorityReference") || !value(document, "specialAuthorityScope")) {
         add("special-authority-incomplete", "Special authority", "A recorded exemption/performance solution/variation needs current status, reference and scope before it should affect an automated decision.");
+      }
+      if (authorityType === "Performance solution" &&
+          (value(document, "specialAuthorityRegisteredOnPoolRegister") !== "Yes" || !value(document, "specialAuthorityForm17Reference"))) {
+        add("performance-solution-registration-incomplete", "Performance solution", "Record confirmation that the performance solution is registered on the regulated pools register and retain the Form 17/final-inspection reference.");
       }
     }
     return reviews;
@@ -627,7 +798,8 @@
       value: result.value === undefined ? "" : result.value,
       threshold: result.threshold === undefined ? "" : result.threshold,
       decisionBasis: result.decisionBasis || "",
-      overriddenBy: result.overriddenBy || ""
+      overriddenBy: result.overriddenBy || "",
+      sourceRef: result.rule && result.rule.sourceRef || ""
     };
   }
 
@@ -654,8 +826,82 @@
       reference: value(document, "specialAuthorityReference"),
       authority: value(document, "specialAuthorityAuthority"),
       scope: value(document, "specialAuthorityScope"),
-      conditions: value(document, "specialAuthorityConditions")
+      conditions: value(document, "specialAuthorityConditions"),
+      registeredOnPoolRegister: value(document, "specialAuthorityRegisteredOnPoolRegister"),
+      form17Reference: value(document, "specialAuthorityForm17Reference")
     };
+  }
+
+  function parseDateOnly(text) {
+    var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(clean(text));
+    return m ? new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]), 12, 0, 0, 0) : null;
+  }
+
+  function formatDateOnly(date) {
+    if (!date || isNaN(date.getTime())) return "";
+    return date.getFullYear() + "-" + String(date.getMonth() + 1).padStart(2, "0") + "-" + String(date.getDate()).padStart(2, "0");
+  }
+
+  function addBusinessDays(text, count) {
+    var date = parseDateOnly(text);
+    if (!date) return "";
+    var remaining = count;
+    while (remaining > 0) {
+      date.setDate(date.getDate() + 1);
+      var day = date.getDay();
+      if (day !== 0 && day !== 6) remaining -= 1;
+    }
+    return formatDateOnly(date);
+  }
+
+  function addCalendarMonths(text, count) {
+    var date = parseDateOnly(text);
+    if (!date) return "";
+    var originalDay = date.getDate();
+    date.setDate(1);
+    date.setMonth(date.getMonth() + count);
+    var last = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+    date.setDate(Math.min(originalDay, last));
+    return formatDateOnly(date);
+  }
+
+  function workflowDeadlines() {
+    var inspection = value(document, "inspectionDate");
+    var notice = value(document, "nonconformityNoticeIssuedDate");
+    var request = value(document, "reinspectionRequestedDate");
+    var agreedLater = value(document, "reinspectionAgreedLaterDate");
+    var periodEnd = notice ? addCalendarMonths(notice, 3) : "";
+    return {
+      certificateOrNoticeGeneralDue: inspection ? addBusinessDays(inspection, 2) : "",
+      minorRepairAgreementDue: value(document, "minorRepairAgreement") === "Yes" && inspection ? addBusinessDays(inspection, 20) : "",
+      reinspectionPeriodEnd: periodEnd,
+      localGovernmentNotificationDue: periodEnd ? addBusinessDays(periodEnd, 5) : "",
+      reinspectionServiceDue: request ? (agreedLater || addBusinessDays(request, 5)) : ""
+    };
+  }
+
+  function workflowAlerts(deadlines) {
+    var today = formatDateOnly(new Date());
+    var alerts = [];
+    function overdue(code, due, completed, message) {
+      if (due && due < today && !completed) alerts.push({ code: code, due: due, message: message });
+    }
+    if (value(document, "certificateReadyToIssue") === "Yes") {
+      overdue("certificate-due", deadlines.certificateOrNoticeGeneralDue, value(document, "certificateIssuedDate"), "Pool safety certificate issue date is not recorded and the general two-business-day issue window has passed.");
+    }
+    if (value(document, "nonconformityNoticeRequired") === "Yes" && value(document, "minorRepairAgreement") !== "Yes") {
+      overdue("nonconformity-notice-due", deadlines.certificateOrNoticeGeneralDue, value(document, "nonconformityNoticeIssuedDate"), "Nonconformity notice issue date is not recorded and the general two-business-day issue window has passed.");
+    }
+    if (value(document, "minorRepairAgreement") === "Yes") {
+      overdue("minor-repair-due", deadlines.minorRepairAgreementDue, value(document, "reinspectionCompletedDate"), "The recorded minor-repair agreement has passed the 20-business-day window without a completed inspection outcome date.");
+    }
+    if (value(document, "reinspectionRequestedDate")) {
+      overdue("reinspection-service-due", deadlines.reinspectionServiceDue, value(document, "reinspectionCompletedDate"), "A requested reinspection is past the calculated five-business-day service date and no later agreed/completed date is recorded.");
+    }
+    if (value(document, "nonconformityNoticeIssuedDate") && !value(document, "reinspectionRequestedDate")) {
+      overdue("local-government-notification-due", deadlines.localGovernmentNotificationDue, value(document, "localGovernmentNotifiedDate"), "No reinspection request is recorded and the calculated local-government notification date has passed.");
+    }
+    return alerts;
   }
 
   function workflowSnapshot() {
@@ -663,11 +909,13 @@
       "overallInspectionResult", "certificateReadyToIssue", "certificateIssuedDate",
       "nonconformityNoticeRequired", "nonconformityNoticeIssuedDate", "nonconformityNoticeReference",
       "minorRepairAgreement", "minorRepairAgreementDueDate",
-      "reinspectionRequired", "reinspectionDueDate", "reinspectionRequestedDate", "reinspectionCompletedDate",
+      "reinspectionRequired", "reinspectionDueDate", "reinspectionRequestedDate", "reinspectionAgreedLaterDate", "reinspectionCompletedDate",
       "localGovernmentNotifiedDate", "ownerAdvisedActions"
     ];
     var result = {};
     names.forEach(function (name) { result[name] = value(document, name); });
+    result.derivedDeadlines = workflowDeadlines();
+    result.alerts = workflowAlerts(result.derivedDeadlines);
     return result;
   }
 
@@ -683,9 +931,10 @@
       "overallInspectionResult", "certificateReadyToIssue", "certificateIssuedDate",
       "nonconformityNoticeRequired", "nonconformityNoticeIssuedDate", "nonconformityNoticeReference",
       "minorRepairAgreement", "minorRepairAgreementDueDate",
-      "reinspectionRequired", "reinspectionDueDate", "reinspectionRequestedDate", "reinspectionCompletedDate",
+      "reinspectionRequired", "reinspectionDueDate", "reinspectionRequestedDate", "reinspectionAgreedLaterDate", "reinspectionCompletedDate",
       "localGovernmentNotifiedDate", "ownerAdvisedActions",
-      "specialAuthorityType", "specialAuthorityStatus", "specialAuthorityReference"
+      "specialAuthorityType", "specialAuthorityStatus", "specialAuthorityReference",
+      "specialAuthorityRegisteredOnPoolRegister", "specialAuthorityForm17Reference"
     ];
     tracked.forEach(function (name) {
       var before = priorFields[name] === undefined ? "" : priorFields[name];
@@ -793,6 +1042,7 @@
     manualReviews: manualReviews,
     buildDecisionAudit: buildDecisionAudit,
     specialAuthoritySnapshot: specialAuthoritySnapshot,
-    workflowSnapshot: workflowSnapshot
+    workflowSnapshot: workflowSnapshot,
+    workflowDeadlines: workflowDeadlines
   };
 })();
