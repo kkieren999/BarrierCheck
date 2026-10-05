@@ -4133,6 +4133,26 @@ function evaluateComplianceForElement(el) {
   if (!rule) return null;
   var label = getFieldLabel(el);
   var item = getFieldItemTitle(el);
+
+  // The measured latch height is evidence, while the inspector's explicit
+  // compliance assessment accounts for permitted shielding/inside-latch
+  // arrangements. A recorded Pass must therefore override the raw 1500mm
+  // threshold so a compliant arrangement is not reported as a defect.
+  if (el.name === "gateLatchHeight") {
+    var gateCard = el.closest(".gate-card");
+    var latchAssessment = gateCard ? gateCard.querySelector('[name="gateLatchHeightCompliant"]') : null;
+    if (latchAssessment && latchAssessment.value === "Pass") {
+      return {
+        status: "pass",
+        rule: rule,
+        item: item,
+        label: label,
+        value: value,
+        overriddenBy: "gateLatchHeightCompliant"
+      };
+    }
+  }
+
   if (rule.type === "number" || rule.type === "number_optional") {
     var numberValue = numberFromValue(value);
     if (numberValue === null) return null;
@@ -4230,10 +4250,15 @@ function collectFindings() {
     seen[key] = true;
     var nearestCard = el.closest(".fence-card") || el.closest(".section-card");
     var comments = [];
+    var evidenceAreas = [];
     if (nearestCard) {
       nearestCard.querySelectorAll("textarea").forEach(function (textarea) {
         var text = textarea.value.trim();
         if (text) comments.push(text);
+      });
+      nearestCard.querySelectorAll('.photo-widget[data-photo-area]').forEach(function (widget) {
+        var area = widget.getAttribute("data-photo-area");
+        if (area && evidenceAreas.indexOf(area) === -1) evidenceAreas.push(area);
       });
     }
     findings.push({
@@ -4246,7 +4271,8 @@ function collectFindings() {
       risk: result.risk,
       recommendation: result.recommendation,
       source: result.rule.source || "Rule bank",
-      inspectorNotes: comments.join(" ")
+      inspectorNotes: comments.join(" "),
+      evidenceAreas: evidenceAreas
     });
   });
   return findings;
@@ -5680,10 +5706,8 @@ function addCardToSummary(card, fallbackTitle, locationSelector) {
   }
 }
 
-function updateChangedFieldUi(el) {
+function applyComplianceMarkerForElement(el) {
   if (!el) return;
-  if (typeof markRequiredElement === "function") markRequiredElement(el);
-
   var container = getComplianceContainer(el);
   if (!container) return;
 
@@ -5693,6 +5717,18 @@ function updateChangedFieldUi(el) {
   container.classList.toggle("compliance-pass", result.status === "pass");
   container.classList.toggle("compliance-fail", result.status === "fail");
   container.classList.toggle("compliance-na", result.status === "na");
+}
+
+function updateChangedFieldUi(el) {
+  if (!el) return;
+  if (typeof markRequiredElement === "function") markRequiredElement(el);
+  applyComplianceMarkerForElement(el);
+
+  if (el.name === "gateLatchHeightCompliant") {
+    var gateCard = el.closest(".gate-card");
+    var heightField = gateCard ? gateCard.querySelector('[name="gateLatchHeight"]') : null;
+    applyComplianceMarkerForElement(heightField);
+  }
 }
 
 function bindSaveEvents(root) {
