@@ -3,7 +3,7 @@
 (function () {
   "use strict";
 
-  var REPORT_VERSION = "20261005.3";
+  var REPORT_VERSION = "20261005.4";
   var priorCloseDownloadMode = window.closeDownloadMode;
   var CLIENT_REPORT_HIDDEN_FINDING_IDS = [
     "overall-result-fail",
@@ -156,39 +156,119 @@
     return '<ul>' + items.map(function (item) { return '<li>' + esc(item) + '</li>'; }).join("") + '</ul>';
   }
 
-  function renderFinding(finding, index, photos, referencedCodes) {
+  function uniqueStrings(items) {
+    var seen = {};
+    return (items || []).map(clean).filter(function (item) {
+      if (!item || seen[item]) return false;
+      seen[item] = true;
+      return true;
+    });
+  }
+
+  function groupClientFindings(findings) {
+    var groups = [];
+    var grouped = {};
+
+    (findings || []).forEach(function (finding, index) {
+      var key = clean(finding && finding.reportGroupKey);
+      if (!key) {
+        groups.push({ key: "single:" + index, findings: [finding] });
+        return;
+      }
+
+      if (!grouped[key]) {
+        grouped[key] = { key: key, findings: [] };
+        groups.push(grouped[key]);
+      }
+      grouped[key].findings.push(finding);
+    });
+
+    return groups;
+  }
+
+  function ruleDetails(finding) {
     var lib = library();
     var rule = lib.rules && lib.rules[finding.id] ? lib.rules[finding.id] : null;
-    var evidence = findingEvidence(finding, photos);
-    evidence.forEach(function (photo) { referencedCodes[photo.code] = true; });
+    return {
+      finding: finding,
+      rule: rule,
+      problem: rule && rule.customerProblemTemplate ? fillTemplate(rule.customerProblemTemplate, finding) : clean(finding.issue || ((finding.field || "Item") + " was recorded as " + (finding.value || "Fail") + ".")),
+      why: rule && rule.whyItMatters ? rule.whyItMatters : clean(finding.risk || "This condition may reduce the effectiveness of the pool safety barrier."),
+      requirement: rule && rule.requirementSummary ? rule.requirementSummary : clean(finding.requirement || "The item must satisfy the applicable pool safety requirement."),
+      options: rule && rule.possibleRectificationOptions && rule.possibleRectificationOptions.length ? rule.possibleRectificationOptions : [clean(finding.recommendation || "Rectify this item so it satisfies the applicable pool safety requirement.")],
+      itemTypes: rule && rule.possibleItemTypes ? rule.possibleItemTypes : [],
+      source: sourcesText(rule, finding)
+    };
+  }
 
-    var title = rule && rule.customerTitle ? rule.customerTitle : (finding.item || finding.field || "Inspection issue");
-    var problem = rule && rule.customerProblemTemplate ? fillTemplate(rule.customerProblemTemplate, finding) : clean(finding.issue || ((finding.field || "Item") + " was recorded as " + (finding.value || "Fail") + "."));
-    var why = rule && rule.whyItMatters ? rule.whyItMatters : clean(finding.risk || "This condition may reduce the effectiveness of the pool safety barrier.");
-    var requirement = rule && rule.requirementSummary ? rule.requirementSummary : clean(finding.requirement || "The item must satisfy the applicable pool safety requirement.");
-    var options = rule && rule.possibleRectificationOptions && rule.possibleRectificationOptions.length ? rule.possibleRectificationOptions : [clean(finding.recommendation || "Rectify the item so it satisfies the applicable pool safety requirement.")];
-    var itemTypes = rule && rule.possibleItemTypes ? rule.possibleItemTypes : [];
-    var evidenceText = evidence.length
-      ? "Refer to " + evidence.map(function (photo) { return "image " + photo.code; }).join(", ") + " in Appendix A."
-      : (photos.length ? "Photographic evidence is provided in Appendix A." : "No inspection photographs were recorded.");
+  function groupEvidence(group, photos) {
+    var byCode = {};
+    var result = [];
+    (group.findings || []).forEach(function (finding) {
+      findingEvidence(finding, photos).forEach(function (photo) {
+        if (!photo || byCode[photo.code]) return;
+        byCode[photo.code] = true;
+        result.push(photo);
+      });
+    });
+    return result;
+  }
+
+  function renderInlineEvidence(evidence) {
+    if (!evidence.length) return "";
+    return '<div class="bc2-block bc2-evidence"><b>Photographic evidence</b><div class="bc2-inline-photo-grid">' +
+      evidence.map(function (photo) {
+        return '<figure><img src="' + esc(photo.src) + '" alt="' + esc(photo.code) + '"><figcaption><strong>' + esc(photo.code) + '</strong> — ' + esc(photo.caption) + '</figcaption></figure>';
+      }).join("") +
+    '</div></div>';
+  }
+
+  function renderFindingGroup(group, index, photos) {
+    var details = (group.findings || []).map(ruleDetails);
+    if (!details.length) return "";
+
+    var primary = details[0];
+    var firstFinding = primary.finding;
+    var item = clean(firstFinding.item || firstFinding.field || "Inspection issue");
+    var isGrouped = details.length > 1;
+    var title = isGrouped ? item : (primary.rule && primary.rule.customerTitle ? primary.rule.customerTitle : item);
+    var subTitle = !isGrouped && clean(firstFinding.item) && clean(firstFinding.item) !== clean(title) ? clean(firstFinding.item) : "";
+    var evidence = groupEvidence(group, photos);
+
+    var problemHtml = "";
+    if (isGrouped) {
+      problemHtml = '<p>Several related checks for ' + esc(item) + ' were recorded as non-compliant:</p>' +
+        listHtml(uniqueStrings(details.map(function (detail) { return detail.finding.field; })));
+    } else {
+      problemHtml = '<p>' + esc(primary.problem) + '</p>';
+    }
+
+    var whyItems = uniqueStrings(details.map(function (detail) { return detail.why; }));
+    var requirementItems = uniqueStrings(details.map(function (detail) { return detail.requirement; }));
+    var sourceItems = uniqueStrings(details.map(function (detail) { return detail.source; }));
+    var options = uniqueStrings([].concat.apply([], details.map(function (detail) { return detail.options || []; })));
+    var itemTypes = uniqueStrings([].concat.apply([], details.map(function (detail) { return detail.itemTypes || []; })));
+    var notes = uniqueStrings(details.map(function (detail) { return detail.finding.inspectorNotes; }));
 
     return '<article class="bc2-finding">' +
-      '<div class="bc2-finding-head"><span>F' + String(index + 1).padStart(2, "0") + '</span><div><strong>' + esc(title) + '</strong><small>' + esc(finding.item || finding.field || "") + '</small></div></div>' +
-      '<div class="bc2-block"><b>What needs attention</b><p>' + esc(problem) + '</p></div>' +
-      '<div class="bc2-block"><b>Why this matters</b><p>' + esc(why) + '</p></div>' +
-      '<div class="bc2-block"><b>Requirement</b><p>' + esc(requirement) + '</p><p class="bc2-source"><strong>Source:</strong> ' + esc(sourcesText(rule, finding)) + '</p></div>' +
+      '<div class="bc2-finding-head"><span>F' + String(index + 1).padStart(2, "0") + '</span><div><strong>' + esc(title) + '</strong>' + (subTitle ? '<small>' + esc(subTitle) + '</small>' : '') + '</div></div>' +
+      '<div class="bc2-block"><b>What needs attention</b>' + problemHtml + '</div>' +
+      '<div class="bc2-block"><b>Why this matters</b>' + (whyItems.length === 1 ? '<p>' + esc(whyItems[0]) + '</p>' : listHtml(whyItems)) + '</div>' +
+      '<div class="bc2-block"><b>Requirement</b>' + (requirementItems.length === 1 ? '<p>' + esc(requirementItems[0]) + '</p>' : listHtml(requirementItems)) +
+        '<p class="bc2-source"><strong>Source:</strong> ' + esc(sourceItems.join("; ")) + '</p></div>' +
       '<div class="bc2-block bc2-options"><b>Possible ways to rectify the issue</b>' + listHtml(options) + '</div>' +
       (itemTypes.length ? '<div class="bc2-block bc2-items"><b>Examples of repair/component types that may be suitable</b>' + listHtml(itemTypes) + '<p class="bc2-small">These are generic examples only, not product approvals or guarantees of compliance.</p></div>' : '') +
-      '<div class="bc2-block bc2-evidence"><b>Evidence</b><p>' + esc(evidenceText) + '</p></div>' +
+      (notes.length ? '<div class="bc2-block"><b>Inspector notes</b>' + (notes.length === 1 ? '<p>' + esc(notes[0]) + '</p>' : listHtml(notes)) + '</div>' : '') +
+      renderInlineEvidence(evidence) +
     '</article>';
   }
 
-  function renderFindings(findings, photos, referencedCodes) {
-    if (!findings.length) {
+  function renderFindings(groups, photos) {
+    if (!groups.length) {
       return '<section class="bc2-section"><h2>Inspection outcome</h2><div class="bc2-compliant"><strong>No non-compliance findings were generated from the recorded inspection.</strong><p>The detailed inspection record remains stored in BarrierCheck.</p></div></section>';
     }
-    return '<section class="bc2-section"><h2>Items requiring attention</h2><p class="bc2-intro">The items below explain what needs attention, why it matters and possible ways the issue may be rectified.</p>' +
-      findings.map(function (finding, index) { return renderFinding(finding, index, photos, referencedCodes); }).join("") +
+    return '<section class="bc2-section"><h2>Items requiring attention</h2><p class="bc2-intro">Related failures from the same physical inspection section are grouped together below, with only the photographic evidence linked to that issue.</p>' +
+      groups.map(function (group, index) { return renderFindingGroup(group, index, photos); }).join("") +
     '</section>';
   }
 
@@ -229,18 +309,6 @@
     return '<section class="bc2-source-note"><strong>Requirement references:</strong> Queensland Development Code MP 3.4 modifies the referenced AS 1926.1—2007 and AS 1926.2—2007 provisions and prevails to the extent of any inconsistency. This report uses plain-English summaries and clause references rather than reproducing substantial portions of the Australian Standards.</section>';
   }
 
-  function renderAppendix(photos) {
-    if (!photos.length) return "";
-    var chunks = [];
-    for (var i = 0; i < photos.length; i += 6) chunks.push(photos.slice(i, i + 6));
-    return chunks.map(function (chunk, pageIndex) {
-      return '<section class="bc2-appendix bc2-page-break"><div class="bc2-app-head"><h2>Appendix A — Photographic evidence</h2><span>' + (pageIndex + 1) + ' / ' + chunks.length + '</span></div><div class="bc2-photo-grid">' +
-        chunk.map(function (photo) {
-          return '<figure><div class="bc2-code">' + esc(photo.code) + '</div><img src="' + esc(photo.src) + '" alt="' + esc(photo.code) + '"><figcaption>' + esc(photo.caption) + '</figcaption></figure>';
-        }).join("") + '</div></section>';
-    }).join("");
-  }
-
   function injectStyles() {
     if (document.getElementById("customerReportV2Styles")) return;
     var style = document.createElement("style");
@@ -259,9 +327,9 @@
       ".bc2-finding{border:1px solid #e5c0bd;border-left:4px solid #c62828;margin:0 0 3.5mm;border-radius:2mm;break-inside:avoid;background:#fff}.bc2-finding-head{display:flex;gap:2mm;align-items:center;padding:2mm 2.5mm;background:#fff5f4;border-bottom:1px solid #efd6d3}.bc2-finding-head>span{background:#c62828;color:#fff;font-weight:800;border-radius:99px;padding:.8mm 1.6mm;font-size:7.5pt}.bc2-finding-head strong{display:block;color:#7f211b;font-size:10pt}.bc2-finding-head small{display:block;color:#80635f;font-size:7.3pt;margin-top:.5mm}",
       ".bc2-block{padding:2mm 2.7mm;border-bottom:1px solid #edf0f2}.bc2-block:last-child{border-bottom:0}.bc2-block>b{display:block;color:#29495d;font-size:7.8pt;margin-bottom:.7mm}.bc2-block p{margin:0}.bc2-block ul{margin:1mm 0 0 4mm;padding-left:4mm}.bc2-block li{margin:.6mm 0}.bc2-source{margin-top:1.2mm!important;color:#536773;font-size:7.7pt}.bc2-options{background:#f7fbfd}.bc2-items{background:#fbfcfd}.bc2-small{margin-top:1mm!important;color:#687780;font-size:7.2pt;font-style:italic}.bc2-evidence{background:#f8fafb}",
       ".bc2-guidance,.bc2-next,.bc2-source-note,.bc2-compliant{padding:2.5mm 3mm;border:1px solid #d8e4ea;background:#f8fbfc;break-inside:avoid}.bc2-guidance p,.bc2-next p,.bc2-source-note p,.bc2-compliant p{margin:1mm 0 0}.bc2-next ol{margin:1mm 0 0 5mm;padding-left:4mm}.bc2-next li{margin:.7mm 0}.bc2-source-note{font-size:7.4pt;color:#536570;margin:4mm 0}",
-      ".bc2-page-break{break-before:page;page-break-before:always}.bc2-app-head{display:flex;justify-content:space-between;align-items:flex-end}.bc2-app-head span{font-size:7pt;color:#76838b}.bc2-photo-grid{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:repeat(3,1fr);gap:4mm;height:252mm}.bc2-photo-grid figure{margin:0;border:1px solid #d7e2e7;border-radius:2mm;padding:2mm;display:flex;flex-direction:column;min-height:0}.bc2-code{font-weight:800;color:#03286a;margin-bottom:1mm}.bc2-photo-grid img{width:100%;height:65mm;object-fit:contain;background:#f5f7f8}.bc2-photo-grid figcaption{margin-top:1mm;font-size:7.3pt;color:#52636d}",
+      ".bc2-inline-photo-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:3mm;margin-top:1.5mm}.bc2-inline-photo-grid figure{margin:0;border:1px solid #d7e2e7;border-radius:2mm;padding:1.5mm;background:#fff;break-inside:avoid}.bc2-inline-photo-grid img{width:100%;height:58mm;object-fit:contain;background:#f5f7f8}.bc2-inline-photo-grid figcaption{margin-top:1mm;font-size:7.2pt;color:#52636d}",
       "@media screen{body.customer-report-v2 #customerReportV2Root{box-shadow:0 0 30px rgba(0,0,0,.12);margin-top:16px;margin-bottom:70px}.download-close-btn{z-index:1000000!important}}",
-      "@media print{@page{size:A4;margin:8mm 9mm}body.customer-report-v2 #customerReportV2Root{display:block!important;max-width:none!important;margin:0!important;padding:0!important}body.customer-report-v2>.app-shell,body.customer-report-v2 .download-close-btn{display:none!important}.bc2-finding{break-inside:avoid}.bc2-photo-grid{height:260mm}.bc2-photo-grid img{height:68mm}}"
+      "@media print{@page{size:A4;margin:8mm 9mm}body.customer-report-v2 #customerReportV2Root{display:block!important;max-width:none!important;margin:0!important;padding:0!important}body.customer-report-v2>.app-shell,body.customer-report-v2 .download-close-btn{display:none!important}.bc2-finding{break-inside:auto}.bc2-finding-head,.bc2-block{break-inside:avoid}.bc2-inline-photo-grid img{height:56mm}}"
     ].join("\n");
     document.head.appendChild(style);
   }
@@ -276,14 +344,14 @@
 
     var allFindings = typeof window.collectFindings === "function" ? window.collectFindings() : [];
     var findings = filterClientFindings(allFindings);
+    var groups = groupClientFindings(findings);
     var photos = buildPhotoRegistry();
-    var referencedCodes = {};
-    var findingsHtml = renderFindings(findings, photos, referencedCodes);
+    var findingsHtml = renderFindings(groups, photos);
 
     var root = document.createElement("main");
     root.id = "customerReportV2Root";
     root.setAttribute("aria-label", "Customer inspection findings and rectification guide");
-    root.innerHTML = reportHeader(findings) + findingsHtml + guidanceNote() + nextSteps(findings) + sourceNote() + renderAppendix(photos);
+    root.innerHTML = reportHeader(groups) + findingsHtml + guidanceNote() + nextSteps(groups) + sourceNote();
     document.body.appendChild(root);
     return root;
   }
