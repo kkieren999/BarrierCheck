@@ -87,11 +87,15 @@
   function buildPhotoRegistry() {
     var photos = [];
     var counts = {};
+    var physicalCards = Array.prototype.slice.call(document.querySelectorAll(".fence-card"));
     Array.prototype.slice.call(document.querySelectorAll(".photo-widget")).forEach(function (widget) {
       var area = clean(widget.getAttribute("data-photo-area"));
       if (!area) return;
       var prefix = photoPrefix(area);
-      var context = widget.closest(".fence-card, .barrier-check-group, .climbability-card, .climbability-section-group, .gate-card, .gate-section-group, .section-card") || widget.parentElement;
+      var physicalCard = widget.closest(".fence-card");
+      var physicalCardIndex = physicalCard ? physicalCards.indexOf(physicalCard) : -1;
+      var structureKey = physicalCardIndex >= 0 ? "structure-card:" + physicalCardIndex : "";
+      var context = physicalCard || widget.closest(".barrier-check-group, .climbability-card, .climbability-section-group, .gate-card, .gate-section-group, .section-card") || widget.parentElement;
       var caption = contextualTitle(context, area);
       Array.prototype.slice.call(widget.querySelectorAll(".photo-box")).forEach(function (box) {
         var img = box.querySelector("img");
@@ -106,13 +110,21 @@
         if (!fullSrc) return;
         counts[prefix] = (counts[prefix] || 0) + 1;
         var code = prefix + "-" + String(counts[prefix]).padStart(2, "0");
-        photos.push({ code: code, area: area, src: fullSrc, caption: caption });
+        photos.push({ code: code, area: area, structureKey: structureKey, src: fullSrc, caption: caption });
       });
     });
     return photos;
   }
 
   function findingEvidence(finding, photos) {
+    var structureKey = clean(finding && finding.reportGroupKey);
+    if (structureKey) {
+      var structural = photos.filter(function (photo) {
+        return clean(photo.structureKey) === structureKey;
+      });
+      if (structural.length) return structural;
+    }
+
     var areas = Array.isArray(finding && finding.evidenceAreas)
       ? finding.evidenceAreas.map(clean).filter(function (area) { return !!area; })
       : [];
