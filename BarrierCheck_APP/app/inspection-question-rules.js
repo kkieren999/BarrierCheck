@@ -238,6 +238,15 @@
     if (apertureLabel) apertureLabel.classList.toggle("bcq-not-applicable", !showAperture);
     if (aperture && !showAperture && aperture.value) setValue(aperture, "", true);
 
+    ["fenceMeshTopStrainer", "fenceMeshBottomStrainer"].forEach(function (name) {
+      var control = card.querySelector('[name="' + name + '"]');
+      var label = valueLabel(control);
+      if (label) label.classList.toggle("bcq-not-applicable", !showAperture);
+      if (control && !showAperture && control.value && control.value !== "N/A") setValue(control, "N/A", true);
+      if (control && showAperture && control.value === "N/A" && control.dataset.bcqAutoNa === "1") setValue(control, "", true);
+      if (control && !showAperture) control.dataset.bcqAutoNa = "1";
+    });
+
     var fixings = card.querySelector('[name="fenceFixingsSecure"]');
     var fixingsLabel = valueLabel(fixings);
     var span = fixingsLabel && fixingsLabel.querySelector(":scope > span");
