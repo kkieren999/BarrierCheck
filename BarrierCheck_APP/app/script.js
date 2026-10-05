@@ -2079,15 +2079,16 @@ var COMPLIANCE_RULE_BANK = [
   {
     "id": "fence-effective-height-1200",
     "field": "fenceHeight",
-    "type": "number",
+    "type": "derived",
     "operator": ">=",
     "threshold": 1200,
     "itemType": "Fence",
-    "requirement": "Effective barrier height should be at least 1200mm unless another specific barrier requirement applies.",
+    "requirement": "Effective fence height is derived from construction and aperture: generally 1200mm, but mesh/perforated apertures >13mm to <=100mm require 1800mm.",
     "issueTemplate": "The measured effective barrier height for {item} was {value}mm, which is below the rule-bank threshold of {threshold}mm.",
     "riskTemplate": "A reduced effective barrier height may make it easier for a young child to climb over the barrier and access the pool area.",
     "recommendationTemplate": "Rectify this fence section so the effective barrier height satisfies the applicable pool safety standard before a pool safety certificate is issued.",
-    "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024",
+    "engine": "compliance-engine.js"
   },
   {
     "id": "fence-ground-clearance-100",
@@ -2105,28 +2106,30 @@ var COMPLIANCE_RULE_BANK = [
   {
     "id": "fence-aperture-max-100",
     "field": "fenceApertureSize",
-    "type": "number_optional",
+    "type": "derived",
     "operator": "<=",
     "threshold": 100,
     "itemType": "Fence",
-    "requirement": "Perforated or mesh barrier aperture sizes should not exceed 100mm.",
+    "requirement": "Mesh/perforated fencing is conditional: <=13mm apertures may use 1200mm effective height; >13mm to <=100mm requires 1800mm effective height; >100mm is not permitted, with top and bottom strainer wire/rail required.",
     "issueTemplate": "The recorded mesh/perforated aperture size for {item} was {value}mm, which is above the rule-bank threshold of {threshold}mm.",
     "riskTemplate": "Large apertures may compromise the barrier by allowing climbing, footholds or access through the barrier.",
     "recommendationTemplate": "Replace, modify or rectify the mesh/perforated barrier section so the aperture size satisfies the applicable pool safety standard.",
-    "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024",
+    "engine": "compliance-engine.js"
   },
   {
     "id": "boundary-height-1800",
     "field": "boundaryFenceHeight",
-    "type": "number_optional",
+    "type": "derived",
     "operator": ">=",
     "threshold": 1800,
     "itemType": "Boundary Fence",
-    "requirement": "Boundary fence height should be at least 1800mm where the boundary fence forms part of the pool barrier.",
-    "issueTemplate": "The recorded boundary fence height for {item} was {value}mm, which is below the rule-bank threshold of {threshold}mm.",
+    "requirement": "Boundary fence height is conditional: 1200-1799mm is permitted where the NCZ is on the outside; 1800mm or more may use the applicable inside or outside NCZ arrangement.",
+    "issueTemplate": "The recorded boundary-fence height and NCZ arrangement do not satisfy the Queensland modification.",
     "riskTemplate": "A reduced boundary barrier height may allow easier climbing or access from outside the pool area.",
     "recommendationTemplate": "Rectify the boundary fence so its effective height and non-climbable zone satisfy the applicable pool safety standard.",
-    "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024",
+    "engine": "compliance-engine.js"
   },
   {
     "id": "gate-gap-under-100",
@@ -2157,7 +2160,7 @@ var COMPLIANCE_RULE_BANK = [
   {
     "id": "ncz-object-distance-900",
     "field": "nczDistance",
-    "type": "number_optional",
+    "type": "derived",
     "operator": ">=",
     "threshold": 900,
     "itemType": "NCZ Object",
@@ -2165,20 +2168,22 @@ var COMPLIANCE_RULE_BANK = [
     "issueTemplate": "The recorded distance from the barrier for {item} was {value}mm, which is within the rule-bank threshold of {threshold}mm.",
     "riskTemplate": "A climbable object within the non-climbable zone may assist a young child to climb the barrier and access the pool area.",
     "recommendationTemplate": "Remove or permanently relocate the object outside the non-climbable zone, or otherwise rectify the barrier arrangement so it satisfies the applicable pool safety standard.",
-    "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024",
+    "engine": "compliance-engine.js"
   },
   {
     "id": "water-barrier-depth-300",
     "field": "waterBarrierDepth",
-    "type": "number_optional",
-    "operator": ">=",
+    "type": "derived",
+    "operator": ">",
     "threshold": 300,
     "itemType": "Permanent Body of Water",
-    "requirement": "A permanent body of water used as a barrier should have sufficient depth at the relevant pool-area edge.",
+    "requirement": "Where a permanent body of water is relied on as part of the barrier, the relevant depth must be continuously more than 300mm and the other QDC MP 3.4 water-barrier conditions must also be satisfied.",
     "issueTemplate": "The recorded water depth for {item} was {value}mm, which is below the rule-bank threshold of {threshold}mm.",
     "riskTemplate": "Insufficient water depth may mean the water body does not provide an effective barrier to young children.",
     "recommendationTemplate": "Review and rectify the barrier arrangement so the permanent body of water and associated barrier layout satisfy the applicable pool safety standard.",
-    "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024",
+    "engine": "compliance-engine.js"
   },
   {
     "id": "barrier-surrounds-pool",
@@ -2983,7 +2988,7 @@ var COMPLIANCE_RULE_BANK = [
   {
     "id": "ncz-horizontal-surface",
     "field": "nczHorizontalSurface",
-    "type": "select_values",
+    "type": "derived",
     "triggerValues": [
       "Fail"
     ],
@@ -2998,7 +3003,8 @@ var COMPLIANCE_RULE_BANK = [
     "issueTemplate": "{label} for {item} was recorded as Fail.",
     "riskTemplate": "A horizontal surface within the NCZ may assist climbing over the barrier.",
     "recommendationTemplate": "Remove, shield or modify the horizontal surface so it does not create a climbable feature within the NCZ.",
-    "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024",
+    "engine": "compliance-engine.js"
   },
   {
     "id": "gate-swingsaway",
@@ -3641,46 +3647,6 @@ var COMPLIANCE_RULE_BANK = [
     "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
   },
   {
-    "id": "safety-certificatereadytoissue",
-    "field": "certificateReadyToIssue",
-    "type": "select_values",
-    "triggerValues": [
-      "Fail"
-    ],
-    "passValues": [
-      "Pass"
-    ],
-    "naValues": [
-      "N/A"
-    ],
-    "itemType": "Safety / Outcome",
-    "requirement": "Pool safety certificate ready to issue should be compliant or not applicable.",
-    "issueTemplate": "{label} for {item} was recorded as Fail.",
-    "riskTemplate": "A certificate should not be issued if unresolved compliance items remain.",
-    "recommendationTemplate": "Resolve all outstanding compliance items before issuing a pool safety certificate.",
-    "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
-  },
-  {
-    "id": "safety-owneradvisedactions",
-    "field": "ownerAdvisedActions",
-    "type": "select_values",
-    "triggerValues": [
-      "Fail"
-    ],
-    "passValues": [
-      "Pass"
-    ],
-    "naValues": [
-      "N/A"
-    ],
-    "itemType": "Safety / Outcome",
-    "requirement": "Owner advised of required actions should be compliant or not applicable.",
-    "issueTemplate": "{label} for {item} was recorded as Fail.",
-    "riskTemplate": "The owner/occupier should be advised of required rectification actions.",
-    "recommendationTemplate": "Provide clear written advice to the owner/occupier about the required actions and reinspection pathway.",
-    "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
-  },
-  {
     "id": "site-hazards-observed",
     "field": "siteHazardsNoted",
     "type": "select_values",
@@ -3725,17 +3691,17 @@ var COMPLIANCE_RULE_BANK = [
     "field": "buildingWorkAffectingBarrier",
     "type": "select_values",
     "triggerValues": [
-      "Yes"
+      "Fail"
     ],
     "passValues": [
-      "No"
+      "Pass"
     ],
     "naValues": [
       "N/A"
     ],
     "itemType": "Temporary Fencing / Building Work",
-    "requirement": "Building work should not compromise the pool barrier.",
-    "issueTemplate": "Building work affecting the barrier was recorded for {item}.",
+    "requirement": "Building work must not compromise the pool barrier.",
+    "issueTemplate": "Building work affecting the barrier was recorded as non-compliant for {item}.",
     "riskTemplate": "Building work may create gaps, access points or removed sections that compromise the pool barrier.",
     "recommendationTemplate": "Install temporary controls and rectify/reinstate the barrier so access to the pool area remains restricted.",
     "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
@@ -3995,7 +3961,7 @@ var COMPLIANCE_RULE_BANK = [
 
 function loadComplianceRuleBankFromFile() {
   if (!window.fetch) return;
-  fetch("./rules/qld-pool-safety-2024.json?v=20260615bottomnav2", { cache: "no-store" })
+  fetch("./rules/qld-pool-safety-2024.json?v=20261005compliance4", { cache: "no-store" })
     .then(function (response) {
       if (!response.ok) throw new Error("Rules file could not be loaded");
       return response.json();
