@@ -3,8 +3,13 @@
 (function () {
   "use strict";
 
-  var REPORT_VERSION = "20260810.2";
+  var REPORT_VERSION = "20261005.3";
   var priorCloseDownloadMode = window.closeDownloadMode;
+  var CLIENT_REPORT_HIDDEN_FINDING_IDS = [
+    "overall-result-fail",
+    "observed-nonconformitynoticerequired",
+    "observed-reinspectionrequired"
+  ];
 
   function esc(value) {
     return String(value === undefined || value === null ? "" : value)
@@ -108,13 +113,33 @@
   }
 
   function findingEvidence(finding, photos) {
-    var text = [finding.item, finding.field, finding.id].map(clean).join(" ");
-    var areas = [];
+    var areas = Array.isArray(finding && finding.evidenceAreas)
+      ? finding.evidenceAreas.map(clean).filter(function (area) { return !!area; })
+      : [];
+
+    var text = [finding && finding.item, finding && finding.field, finding && finding.id].map(clean).join(" ");
     var match;
-    match = /fence(?: section)?\s*(\d+)/i.exec(text); if (match) areas.push("fence-" + match[1]);
-    match = /(?:ncz|climbability)(?: section| check| \/ climbable object)?\s*(\d+)/i.exec(text); if (match) areas.push("climbability-" + match[1]);
-    match = /gate\s*(\d+)/i.exec(text); if (match) areas.push("gate-" + match[1]);
-    return photos.filter(function (photo) { return areas.indexOf(photo.area) !== -1; });
+    if (!areas.length) {
+      match = /fence(?: section)?\s*(\d+)/i.exec(text); if (match) areas.push("fence-" + match[1]);
+      match = /(?:ncz|climbability)(?: section| check| \/ climbable object)?\s*(\d+)/i.exec(text); if (match) areas.push("climbability-" + match[1]);
+      match = /gate\s*(\d+)/i.exec(text); if (match) areas.push("gate-" + match[1]);
+    }
+
+    var direct = photos.filter(function (photo) { return areas.indexOf(photo.area) !== -1; });
+    if (direct.length) return direct;
+
+    var item = clean(finding && finding.item).toLowerCase();
+    if (!item || item === "inspection item") return [];
+    return photos.filter(function (photo) {
+      var caption = clean(photo.caption).toLowerCase();
+      return caption && (caption === item || caption.indexOf(item) !== -1 || item.indexOf(caption) !== -1);
+    });
+  }
+
+  function filterClientFindings(findings) {
+    return (findings || []).filter(function (finding) {
+      return CLIENT_REPORT_HIDDEN_FINDING_IDS.indexOf(finding && finding.id) === -1;
+    });
   }
 
   function sourcesText(rule, finding) {
@@ -143,7 +168,9 @@
     var requirement = rule && rule.requirementSummary ? rule.requirementSummary : clean(finding.requirement || "The item must satisfy the applicable pool safety requirement.");
     var options = rule && rule.possibleRectificationOptions && rule.possibleRectificationOptions.length ? rule.possibleRectificationOptions : [clean(finding.recommendation || "Rectify the item so it satisfies the applicable pool safety requirement.")];
     var itemTypes = rule && rule.possibleItemTypes ? rule.possibleItemTypes : [];
-    var evidenceText = evidence.length ? "Refer to " + evidence.map(function (photo) { return photo.code; }).join(", ") + " in Appendix A." : "No specific report photograph is linked to this finding.";
+    var evidenceText = evidence.length
+      ? "Refer to " + evidence.map(function (photo) { return "image " + photo.code; }).join(", ") + " in Appendix A."
+      : (photos.length ? "Photographic evidence is provided in Appendix A." : "No inspection photographs were recorded.");
 
     return '<article class="bc2-finding">' +
       '<div class="bc2-finding-head"><span>F' + String(index + 1).padStart(2, "0") + '</span><div><strong>' + esc(title) + '</strong><small>' + esc(finding.item || finding.field || "") + '</small></div></div>' +
@@ -202,13 +229,12 @@
     return '<section class="bc2-source-note"><strong>Requirement references:</strong> Queensland Development Code MP 3.4 modifies the referenced AS 1926.1—2007 and AS 1926.2—2007 provisions and prevails to the extent of any inconsistency. This report uses plain-English summaries and clause references rather than reproducing substantial portions of the Australian Standards.</section>';
   }
 
-  function renderAppendix(photos, referencedCodes) {
-    var selected = photos.filter(function (photo) { return !!referencedCodes[photo.code]; });
-    if (!selected.length) return "";
+  function renderAppendix(photos) {
+    if (!photos.length) return "";
     var chunks = [];
-    for (var i = 0; i < selected.length; i += 4) chunks.push(selected.slice(i, i + 4));
+    for (var i = 0; i < photos.length; i += 6) chunks.push(photos.slice(i, i + 6));
     return chunks.map(function (chunk, pageIndex) {
-      return '<section class="bc2-appendix bc2-page-break"><div class="bc2-app-head"><h2>Appendix A — Referenced photographic evidence</h2><span>' + (pageIndex + 1) + ' / ' + chunks.length + '</span></div><div class="bc2-photo-grid">' +
+      return '<section class="bc2-appendix bc2-page-break"><div class="bc2-app-head"><h2>Appendix A — Photographic evidence</h2><span>' + (pageIndex + 1) + ' / ' + chunks.length + '</span></div><div class="bc2-photo-grid">' +
         chunk.map(function (photo) {
           return '<figure><div class="bc2-code">' + esc(photo.code) + '</div><img src="' + esc(photo.src) + '" alt="' + esc(photo.code) + '"><figcaption>' + esc(photo.caption) + '</figcaption></figure>';
         }).join("") + '</div></section>';
@@ -233,9 +259,9 @@
       ".bc2-finding{border:1px solid #e5c0bd;border-left:4px solid #c62828;margin:0 0 3.5mm;border-radius:2mm;break-inside:avoid;background:#fff}.bc2-finding-head{display:flex;gap:2mm;align-items:center;padding:2mm 2.5mm;background:#fff5f4;border-bottom:1px solid #efd6d3}.bc2-finding-head>span{background:#c62828;color:#fff;font-weight:800;border-radius:99px;padding:.8mm 1.6mm;font-size:7.5pt}.bc2-finding-head strong{display:block;color:#7f211b;font-size:10pt}.bc2-finding-head small{display:block;color:#80635f;font-size:7.3pt;margin-top:.5mm}",
       ".bc2-block{padding:2mm 2.7mm;border-bottom:1px solid #edf0f2}.bc2-block:last-child{border-bottom:0}.bc2-block>b{display:block;color:#29495d;font-size:7.8pt;margin-bottom:.7mm}.bc2-block p{margin:0}.bc2-block ul{margin:1mm 0 0 4mm;padding-left:4mm}.bc2-block li{margin:.6mm 0}.bc2-source{margin-top:1.2mm!important;color:#536773;font-size:7.7pt}.bc2-options{background:#f7fbfd}.bc2-items{background:#fbfcfd}.bc2-small{margin-top:1mm!important;color:#687780;font-size:7.2pt;font-style:italic}.bc2-evidence{background:#f8fafb}",
       ".bc2-guidance,.bc2-next,.bc2-source-note,.bc2-compliant{padding:2.5mm 3mm;border:1px solid #d8e4ea;background:#f8fbfc;break-inside:avoid}.bc2-guidance p,.bc2-next p,.bc2-source-note p,.bc2-compliant p{margin:1mm 0 0}.bc2-next ol{margin:1mm 0 0 5mm;padding-left:4mm}.bc2-next li{margin:.7mm 0}.bc2-source-note{font-size:7.4pt;color:#536570;margin:4mm 0}",
-      ".bc2-page-break{break-before:page;page-break-before:always}.bc2-app-head{display:flex;justify-content:space-between;align-items:flex-end}.bc2-app-head span{font-size:7pt;color:#76838b}.bc2-photo-grid{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:repeat(2,1fr);gap:5mm;height:252mm}.bc2-photo-grid figure{margin:0;border:1px solid #d7e2e7;border-radius:2mm;padding:2.5mm;display:flex;flex-direction:column}.bc2-code{font-weight:800;color:#03286a;margin-bottom:1.5mm}.bc2-photo-grid img{width:100%;height:92mm;object-fit:contain;background:#f5f7f8}.bc2-photo-grid figcaption{margin-top:1.5mm;font-size:7.5pt;color:#52636d}",
+      ".bc2-page-break{break-before:page;page-break-before:always}.bc2-app-head{display:flex;justify-content:space-between;align-items:flex-end}.bc2-app-head span{font-size:7pt;color:#76838b}.bc2-photo-grid{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:repeat(3,1fr);gap:4mm;height:252mm}.bc2-photo-grid figure{margin:0;border:1px solid #d7e2e7;border-radius:2mm;padding:2mm;display:flex;flex-direction:column;min-height:0}.bc2-code{font-weight:800;color:#03286a;margin-bottom:1mm}.bc2-photo-grid img{width:100%;height:65mm;object-fit:contain;background:#f5f7f8}.bc2-photo-grid figcaption{margin-top:1mm;font-size:7.3pt;color:#52636d}",
       "@media screen{body.customer-report-v2 #customerReportV2Root{box-shadow:0 0 30px rgba(0,0,0,.12);margin-top:16px;margin-bottom:70px}.download-close-btn{z-index:1000000!important}}",
-      "@media print{@page{size:A4;margin:8mm 9mm}body.customer-report-v2 #customerReportV2Root{display:block!important;max-width:none!important;margin:0!important;padding:0!important}body.customer-report-v2>.app-shell,body.customer-report-v2 .download-close-btn{display:none!important}.bc2-finding{break-inside:avoid}.bc2-photo-grid{height:260mm}.bc2-photo-grid img{height:96mm}}"
+      "@media print{@page{size:A4;margin:8mm 9mm}body.customer-report-v2 #customerReportV2Root{display:block!important;max-width:none!important;margin:0!important;padding:0!important}body.customer-report-v2>.app-shell,body.customer-report-v2 .download-close-btn{display:none!important}.bc2-finding{break-inside:avoid}.bc2-photo-grid{height:260mm}.bc2-photo-grid img{height:68mm}}"
     ].join("\n");
     document.head.appendChild(style);
   }
@@ -248,7 +274,8 @@
     if (old) old.remove();
     if (typeof window.refreshSummary === "function") window.refreshSummary(true);
 
-    var findings = typeof window.collectFindings === "function" ? window.collectFindings() : [];
+    var allFindings = typeof window.collectFindings === "function" ? window.collectFindings() : [];
+    var findings = filterClientFindings(allFindings);
     var photos = buildPhotoRegistry();
     var referencedCodes = {};
     var findingsHtml = renderFindings(findings, photos, referencedCodes);
@@ -256,7 +283,7 @@
     var root = document.createElement("main");
     root.id = "customerReportV2Root";
     root.setAttribute("aria-label", "Customer inspection findings and rectification guide");
-    root.innerHTML = reportHeader(findings) + findingsHtml + guidanceNote() + nextSteps(findings) + sourceNote() + renderAppendix(photos, referencedCodes);
+    root.innerHTML = reportHeader(findings) + findingsHtml + guidanceNote() + nextSteps(findings) + sourceNote() + renderAppendix(photos);
     document.body.appendChild(root);
     return root;
   }
