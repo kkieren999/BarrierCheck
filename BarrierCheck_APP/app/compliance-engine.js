@@ -494,7 +494,9 @@
   function poolContext() {
     var p = value("poolType").toLowerCase();
     if (p.indexOf("indoor") !== -1) return "indoor";
-    if (p.indexOf("outdoor") !== -1 || p.indexOf("in-ground") !== -1 || p.indexOf("above-ground") !== -1 || p.indexOf("spa") !== -1 || p.indexOf("swim spa") !== -1) return "outdoor";
+    if (p.indexOf("outdoor") !== -1) return "outdoor";
+    // Generic pool construction labels (in-ground, above-ground, spa)
+    // do not by themselves prove whether the pool is indoors or outdoors.
     return "unknown";
   }
 
@@ -693,6 +695,11 @@
   function evaluateTemporaryAndDecommissioned(result) {
     qsa(".temporary-fence-card").forEach(function (card) {
       var present = value("temporaryFencingPresent", card);
+      var buildingWork = value("buildingWorkAffectingBarrier", card);
+      var approval = value("temporaryFenceApprovalStatus", card);
+      if (buildingWork === "Fail") {
+        result.push(decision("engine-building-work-barrier", "fail", "Temporary fencing", itemTitle(card, "Temporary fencing / building work"), "Building work does not compromise barrier", { buildingWorkAssessment: buildingWork }, "Building work must not remove, alter or create access through the pool barrier without the required compliant controls.", "Building work is recorded as compromising the barrier.", "Install/maintain any required temporary barrier controls and reinstate or rectify the permanent barrier before certification.", "QDC MP 3.4 Schedule 1 modifications 3-4; Queensland PSI Guideline 2024 - Temporary fencing / building work", card));
+      }
       var approval = value("temporaryFenceApprovalStatus", card);
       var approvalDate = value("temporaryFenceApprovalDate", card);
       var endDate = value("temporaryFencePeriodEndDate", card);
