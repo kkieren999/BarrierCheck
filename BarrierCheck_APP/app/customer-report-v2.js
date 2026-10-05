@@ -505,6 +505,25 @@
     root.setAttribute("aria-label", "Customer inspection findings and rectification guide");
     root.innerHTML = reportHeader(groups) + findingsHtml + guidanceNote() + nextSteps(groups) + sourceNote();
     document.body.appendChild(root);
+
+    var findingIds = [];
+    groups.forEach(function (group) {
+      (group.findings || []).forEach(function (finding) {
+        if (finding && finding.id && findingIds.indexOf(finding.id) === -1) findingIds.push(finding.id);
+      });
+    });
+    window.BARRIER_CHECK_CLIENT_REPORT_AUDIT_PENDING = {
+      reportVersion: REPORT_VERSION,
+      complianceEngineVersion: window.BARRIER_CHECK_COMPLIANCE_ENGINE && window.BARRIER_CHECK_COMPLIANCE_ENGINE.version || "",
+      generatedAt: new Date().toISOString(),
+      findingIds: findingIds,
+      clientIssueGroups: groups.length,
+      edited: false,
+      lastEditedAt: "",
+      printedAt: "",
+      finalText: "",
+      finalTextTruncated: false
+    };
     return root;
   }
 
@@ -554,6 +573,16 @@
       el.classList.add("bc2-editable");
     });
 
+    if (!root.dataset.auditEditBound) {
+      root.dataset.auditEditBound = "1";
+      root.addEventListener("input", function () {
+        var audit = window.BARRIER_CHECK_CLIENT_REPORT_AUDIT_PENDING;
+        if (!audit) return;
+        audit.edited = true;
+        audit.lastEditedAt = new Date().toISOString();
+      });
+    }
+
     Array.prototype.slice.call(root.querySelectorAll(".bc2-photo-exclude")).forEach(function (button) {
       button.addEventListener("click", function () {
         var figure = button.closest("figure");
@@ -561,6 +590,11 @@
         var block = button.closest(".bc2-evidence");
         if (figure) figure.remove();
         if (grid && !grid.querySelector("figure") && block) block.remove();
+        var audit = window.BARRIER_CHECK_CLIENT_REPORT_AUDIT_PENDING;
+        if (audit) {
+          audit.edited = true;
+          audit.lastEditedAt = new Date().toISOString();
+        }
       });
     });
   }
@@ -582,6 +616,16 @@
 
     bar.querySelector(".bc2-print").addEventListener("click", function () {
       var root = document.getElementById("customerReportV2Root");
+      var pending = window.BARRIER_CHECK_CLIENT_REPORT_AUDIT_PENDING;
+      if (pending && root) {
+        var reportText = String(root.innerText || root.textContent || "").trim();
+        var maxAuditText = 30000;
+        pending.printedAt = new Date().toISOString();
+        pending.finalTextTruncated = reportText.length > maxAuditText;
+        pending.finalText = reportText.slice(0, maxAuditText);
+        window.BARRIER_CHECK_CLIENT_REPORT_AUDIT = JSON.parse(JSON.stringify(pending));
+        if (typeof window.saveCurrentInspection === "function") window.saveCurrentInspection(false);
+      }
       waitForReportImages(root).then(function () {
         window.setTimeout(function () { window.print(); }, 60);
       });
