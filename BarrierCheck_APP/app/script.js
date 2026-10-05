@@ -4424,6 +4424,10 @@ function fenceTemplate(number) {
       '<div class="form-grid">' +
         '<label class="field"><span>Effective height (mm)</span><input data-save name="fenceHeight" type="number" placeholder="1200" /></label>' +
         '<label class="field"><span>Ground clearance (mm)</span><input data-save name="fenceGroundClearance" type="number" placeholder="100" /></label>' +
+        '<label class="field"><span>Fence lean direction</span><select data-save name="fenceLeanDirection"><option value=""></option><option>Vertical</option><option>Away from pool</option><option>Toward pool</option></select></label>' +
+        '<label class="field"><span>Fence lean from vertical (degrees)</span><input data-save name="fenceLeanDegrees" type="number" step="0.1" placeholder="0" /></label>' +
+        '<label class="field"><span>Climbable horizontal members relevant</span><select data-save name="fenceHorizontalMembersRelevant"><option value=""></option><option>No</option><option>Yes</option></select></label>' +
+        '<label class="field"><span>Separation between relevant horizontal members (mm)</span><input data-save name="fenceHorizontalMemberSeparation" type="number" placeholder="900" /></label>' +
         '<label class="field"><span>Openings / gaps compliant</span><select data-save name="fenceGaps"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
         '<label class="field"><span>Mesh / perforated aperture size (mm)</span><input data-save name="fenceApertureSize" type="number" placeholder="If applicable" /></label>' +
         '<label class="field"><span>Mesh top strainer wire / rail</span><select data-save name="fenceMeshTopStrainer"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
@@ -4434,6 +4438,9 @@ function fenceTemplate(number) {
       '<div class="group-title-row"><span class="group-number">C</span><h3>NCZ / Strength / Condition</h3></div>' +
       '<div class="form-grid">' +
         '<label class="field"><span>NCZ clear for this fence run</span><select data-save name="fenceNCZClear"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
+        '<label class="field"><span>Outside NCZ extends 900mm beyond fence ends / intersections where required</span><select data-save name="fenceNczEndExtensionCompliant"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
+        '<label class="field"><span>Inside-NCZ barrier intersection present</span><select data-save name="fenceInsideNczIntersectionPresent"><option value=""></option><option>No</option><option>Yes</option><option>N/A</option></select></label>' +
+        '<label class="field"><span>Intersecting top rail / surface width in NCZ (mm)</span><input data-save name="fenceInsideNczIntersectionTopWidth" type="number" placeholder="50" /></label>' +
         '<label class="field"><span>Projections / indentations compliant</span><select data-save name="fenceProjectionsCompliant"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
         '<label class="field"><span>Strength / rigidity acceptable</span><select data-save name="fenceStrengthRigid"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
         '<label class="field"><span>Posts / footings / fixings secure</span><select data-save name="fenceFixingsSecure"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
@@ -4895,6 +4902,10 @@ function temporaryFenceTemplate(number) {
     '<div class="fence-card-head"><h3>Temporary Fencing Check ' + number + '</h3><button class="remove-section-btn" type="button">Remove</button></div>' +
     '<div class="form-grid">' +
       '<label class="field"><span>Temporary fencing present if required</span><select data-save name="temporaryFencingPresent"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
+      '<label class="field"><span>Temporary-fence context</span><select data-save name="temporaryFenceContext"><option value=""></option><option>New pool</option><option>Existing pool barrier works</option><option>Other building work</option><option>Other / requires review</option></select></label>' +
+      '<label class="field"><span>Approval period / stage</span><select data-save name="temporaryFenceApprovalStage"><option value=""></option><option>Initial period</option><option>Second period</option><option>Further period</option></select></label>' +
+      '<label class="field"><span>Approver / inspector role</span><select data-save name="temporaryFenceApprovalRole"><option value=""></option><option>Building certifier</option><option>Pool safety inspector</option><option>Other</option><option>N/A</option></select></label>' +
+      '<label class="field"><span>Nonconformity notice reference for second-period pathway</span><input data-save name="temporaryFenceNonconformityReference" type="text" placeholder="If applicable" /></label>' +
       '<label class="field"><span>Temporary fence appears secure</span><select data-save name="temporaryFenceSecure"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
       '<label class="field"><span>Building work does not compromise barrier</span><select data-save name="buildingWorkAffectingBarrier"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
       '<label class="field"><span>Barrier not removed or altered unsafely</span><select data-save name="barrierNotAlteredUnsafely"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
