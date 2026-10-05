@@ -1,5 +1,5 @@
 {
-  "version": "2026-10-05-qld-rules-v3",
+  "version": "2026-06-15-qld-rules-v2",
   "jurisdiction": "Queensland",
   "ruleSetName": "Queensland Pool Safety Rule Bank - Draft v2",
   "status": "draft_for_testing",
@@ -50,6 +50,19 @@
       "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
     },
     {
+      "id": "boundary-height-1800",
+      "field": "boundaryFenceHeight",
+      "type": "number_optional",
+      "operator": ">=",
+      "threshold": 1800,
+      "itemType": "Boundary Fence",
+      "requirement": "Boundary fence height should be at least 1800mm where the boundary fence forms part of the pool barrier.",
+      "issueTemplate": "The recorded boundary fence height for {item} was {value}mm, which is below the rule-bank threshold of {threshold}mm.",
+      "riskTemplate": "A reduced boundary barrier height may allow easier climbing or access from outside the pool area.",
+      "recommendationTemplate": "Rectify the boundary fence so its effective height and non-climbable zone satisfy the applicable pool safety standard.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
       "id": "gate-gap-under-100",
       "field": "gateGapUnder",
       "type": "number_optional",
@@ -73,6 +86,32 @@
       "issueTemplate": "The recorded latch height for {item} was {value}mm, which is below the rule-bank threshold of {threshold}mm.",
       "riskTemplate": "A low latch may be reachable by a young child and may allow unsupervised access to the pool area.",
       "recommendationTemplate": "Raise, shield or otherwise rectify the latch release arrangement so it satisfies the applicable pool safety standard.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "ncz-object-distance-900",
+      "field": "nczDistance",
+      "type": "number_optional",
+      "operator": ">=",
+      "threshold": 900,
+      "itemType": "NCZ Object",
+      "requirement": "Climbable objects should not be within the 900mm non-climbable zone where they create a foothold/handhold risk.",
+      "issueTemplate": "The recorded distance from the barrier for {item} was {value}mm, which is within the rule-bank threshold of {threshold}mm.",
+      "riskTemplate": "A climbable object within the non-climbable zone may assist a young child to climb the barrier and access the pool area.",
+      "recommendationTemplate": "Remove or permanently relocate the object outside the non-climbable zone, or otherwise rectify the barrier arrangement so it satisfies the applicable pool safety standard.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "water-barrier-depth-300",
+      "field": "waterBarrierDepth",
+      "type": "number_optional",
+      "operator": ">=",
+      "threshold": 300,
+      "itemType": "Permanent Body of Water",
+      "requirement": "A permanent body of water used as a barrier should have sufficient depth at the relevant pool-area edge.",
+      "issueTemplate": "The recorded water depth for {item} was {value}mm, which is below the rule-bank threshold of {threshold}mm.",
+      "riskTemplate": "Insufficient water depth may mean the water body does not provide an effective barrier to young children.",
+      "recommendationTemplate": "Review and rectify the barrier arrangement so the permanent body of water and associated barrier layout satisfy the applicable pool safety standard.",
       "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
     },
     {
@@ -876,6 +915,26 @@
       "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
     },
     {
+      "id": "ncz-horizontal-surface",
+      "field": "nczHorizontalSurface",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "NCZ Object",
+      "requirement": "Substantially horizontal surfaces within the NCZ should not create climbable handholds or footholds.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "A horizontal surface within the NCZ may assist climbing over the barrier.",
+      "recommendationTemplate": "Remove, shield or modify the horizontal surface so it does not create a climbable feature within the NCZ.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
       "id": "gate-swingsaway",
       "field": "gateSwingsAway",
       "type": "select_values",
@@ -1600,19 +1659,19 @@
       "field": "buildingWorkAffectingBarrier",
       "type": "select_values",
       "triggerValues": [
-        "Fail"
+        "Yes"
       ],
       "passValues": [
-        "Pass"
+        "No"
       ],
       "naValues": [
         "N/A"
       ],
       "itemType": "Temporary Fencing / Building Work",
-      "requirement": "Building work must not compromise the pool barrier.",
-      "issueTemplate": "Building work affecting {item} was recorded as compromising the barrier.",
-      "riskTemplate": "Building work may create gaps, access points or removed/altered sections that compromise the pool barrier.",
-      "recommendationTemplate": "Install any required temporary controls and rectify or reinstate the barrier so access to the pool area remains restricted.",
+      "requirement": "Building work should not compromise the pool barrier.",
+      "issueTemplate": "Building work affecting the barrier was recorded for {item}.",
+      "riskTemplate": "Building work may create gaps, access points or removed sections that compromise the pool barrier.",
+      "recommendationTemplate": "Install temporary controls and rectify/reinstate the barrier so access to the pool area remains restricted.",
       "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
     },
     {
