@@ -182,7 +182,7 @@
       fieldBlock("Internal floor to sill h2 (mm)",
         '<input data-save name="barrierWindowInternalSillHeight" type="number" placeholder="900">', "", false) +
       fieldBlock("Protection method",
-        '<select data-save name="barrierWindowProtectionMethod"><option value="">Select method</option><option>Fixed bars / mesh screen</option><option>Restricted opening</option><option>Other permitted arrangement</option><option>N/A</option></select>', "", false) +
+        '<select data-save name="barrierWindowProtectionMethod"><option value="">Select method</option><option>Fixed bars / mesh screen</option><option>Restricted opening</option><option>Securely fixed flyscreen</option><option>Other permitted arrangement</option><option>N/A</option></select>', "", false) +
       fieldBlock("Maximum openable gap (mm)",
         '<input data-save name="barrierWindowMaxOpening" type="number" placeholder="100">', "", false)
     );
@@ -498,6 +498,65 @@
     });
   }
 
+  function evaluateNczGeometry(result) {
+    var fenceCards = qsa('.fence-card[data-section="fence"]');
+    qsa(".climbability-card").forEach(function (card, index) {
+      var fenceCard = fenceCards[index] || null;
+      var height = num(value("fenceHeight", fenceCard));
+      var side = value("nczSideOfBarrier", card);
+      var extension = value("nczEndExtensionCompliant", card);
+      var clearWidth = num(value("additionalClearAreaWidth", card));
+      var insideIntersection = value("nczInsideIntersectionPresent", card);
+      var topWidth = num(value("nczIntersectionTopSurfaceWidth", card));
+      var item = itemTitle(card, "NCZ / climbability");
+
+      if (extension === "No") {
+        result.push(decision("engine-ncz-end-extension", "fail", "NCZ", item, "NCZ extension at fence ends / intersections",
+          { side: side, extensionCompliant: extension },
+          "Where an outside NCZ reaches a fence end or intersection, the NCZ and additional clear area must extend 900mm beyond that point.",
+          "The required NCZ extension is recorded as not compliant.",
+          "Extend/reconfigure the NCZ and associated clear area through the required distance, then reassess the adjoining barrier.",
+          "QDC MP 3.4 Schedule 1 modification 10", card));
+      }
+
+      if (side === "Outside pool area") {
+        if (clearWidth !== null && clearWidth < 300) {
+          result.push(decision("engine-additional-clear-area-width", "fail", "NCZ", item, "Additional clear area",
+            { side: side, width: clearWidth, fenceHeight: height },
+            "Where the NCZ is outside, an additional clear area must be provided immediately adjacent to the outside to maintain effective barrier height; the Queensland guideline describes this area as 300mm wide.",
+            "The recorded additional clear-area width is less than 300mm.",
+            "Provide and permanently maintain the required additional clear area, then remeasure effective barrier height from any raised/climbable surface.",
+            "QDC MP 3.4 Schedule 1 modification 9; Queensland PSI Guideline 2024 - Additional clear area", card));
+        } else if (clearWidth === null && height !== null && height < 1800) {
+          result.push(decision("engine-additional-clear-area-width", "review", "NCZ", item, "Additional clear area",
+            { side: side, width: "", fenceHeight: height },
+            "An outside NCZ requires the associated additional clear-area assessment.",
+            "The clear-area width has not been recorded.",
+            "Record the additional clear-area geometry and confirm that nearby objects/levels do not reduce the effective height.",
+            "QDC MP 3.4 Schedule 1 modification 9; Queensland PSI Guideline 2024 - Additional clear area", card));
+        }
+      }
+
+      if (height !== null && height >= 1800 && side === "Inside pool area" && insideIntersection === "Yes") {
+        if (topWidth === null) {
+          result.push(decision("engine-inside-ncz-intersection", "review", "NCZ", item, "Inside NCZ intersecting barrier / surface",
+            { fenceHeight: height, side: side, intersectionPresent: insideIntersection, topSurfaceWidth: "" },
+            "For an inside NCZ on a barrier 1800mm or higher, an intersecting barrier is permitted only where the top rail/surface does not exceed the permitted width within the NCZ.",
+            "An intersection is recorded but its top-surface width is missing.",
+            "Measure the intersecting top rail/surface before finalising the NCZ decision.",
+            "QDC MP 3.4 Schedule 1 modification 11", card));
+        } else if (topWidth > 50) {
+          result.push(decision("engine-inside-ncz-intersection", "fail", "NCZ", item, "Inside NCZ intersecting barrier / surface",
+            { fenceHeight: height, side: side, intersectionPresent: insideIntersection, topSurfaceWidth: topWidth },
+            "For an inside NCZ on a barrier 1800mm or higher, an intersecting top rail/surface must not exceed 50mm within the NCZ.",
+            "The recorded intersecting top surface is wider than 50mm.",
+            "Modify/reconfigure the intersection so the top surface does not create the prohibited condition, then reassess the inside NCZ.",
+            "QDC MP 3.4 Schedule 1 modification 11", card));
+        }
+      }
+    });
+  }
+
   function poolContext() {
     var p = value("poolType").toLowerCase();
     if (p.indexOf("indoor") !== -1) return "indoor";
@@ -568,20 +627,70 @@
       var tools = value("barrierWindowFixingsRequireTools", card);
       var item = itemTitle(card, "Window");
       var inputs = { externalSillH1: h1, internalSillH2: h2, method: method, maximumOpening: gap, screenBarsMeshFixed: fixed, fixingsRequireTools: tools };
-      if (h1 !== null && h1 >= 1800) {
-        result.push(decision("engine-window-branch", "pass", "Window", item, "Child-resistant window branch", inputs, "The child-resistant openable-window requirements are triggered where the relevant external sill height is below 1800mm.", "Recorded external sill height is at least 1800mm for this branch.", "", "AS 1926.1-2007 clause 2.7", card));
-      } else if (h1 !== null && h1 < 1800 && h2 !== null && h2 <= 900) {
-        if (method === "Restricted opening" && gap !== null && gap <= 100 && tools === "Pass") {
-          result.push(decision("engine-window-branch", "pass", "Window", item, "Child-resistant window branch", inputs, "For this low internal-sill branch, a securely fixed restricted opening of no more than 100mm is one permitted method.", "Recorded restricted-opening measurements and tool-removal evidence satisfy the captured branch.", "", "AS 1926.1-2007 clause 2.7(a)", card));
-        } else if (method === "Fixed bars / mesh screen" && fixed === "Pass" && tools === "Pass") {
-          result.push(decision("engine-window-branch", "pass", "Window", item, "Child-resistant window branch", inputs, "For this low internal-sill branch, compliant bars/mesh fixed so they require tools for removal is one permitted method.", "Recorded fixed-bars/mesh evidence satisfies the captured branch.", "", "AS 1926.1-2007 clause 2.7(a)", card));
-        } else if (method) {
-          result.push(decision("engine-window-branch", "fail", "Window", item, "Child-resistant window branch", inputs, "The selected protection method must satisfy all requirements of its applicable branch.", "The recorded measurements/protection evidence do not establish compliance for the selected method.", "Rectify the window protection arrangement and reassess the applicable AS 1926.1 branch.", "AS 1926.1-2007 clause 2.7(a)", card));
+
+      if (h1 === null) return;
+
+      if (h1 >= 1800) {
+        result.push(decision("engine-window-branch", "pass", "Window", item, "Child-resistant window branch", inputs,
+          "The child-resistant openable-window requirements in this branch are triggered when the external sill height is below 1800mm.",
+          "Recorded external sill height is at least 1800mm.", "", "AS 1926.1-2007 clause 2.7", card));
+        return;
+      }
+
+      if (h2 === null) {
+        result.push(decision("engine-window-branch", "review", "Window", item, "Child-resistant window branch", inputs,
+          "Where the external sill is below 1800mm, the applicable solution depends on the internal floor-to-sill height and protection method.",
+          "Internal sill height has not been recorded.",
+          "Measure h2 and record the window protection arrangement before determining compliance.",
+          "AS 1926.1-2007 clause 2.7", card));
+        return;
+      }
+
+      if (h2 >= 1200) {
+        result.push(decision("engine-window-branch", "pass", "Window", item, "Child-resistant window branch", inputs,
+          "A window outside the earlier sub-branches satisfies this height branch where the internal floor-to-sill height is at least 1200mm.",
+          "Recorded internal sill height is at least 1200mm.", "", "AS 1926.1-2007 clause 2.7(c)", card));
+        return;
+      }
+
+      var fixedBarsPass = method === "Fixed bars / mesh screen" && fixed === "Pass" && tools === "Pass";
+      var restrictedPass = method === "Restricted opening" && gap !== null && gap <= 100 && tools === "Pass";
+
+      if (h2 <= 900) {
+        if (fixedBarsPass || restrictedPass) {
+          result.push(decision("engine-window-branch", "pass", "Window", item, "Child-resistant window branch", inputs,
+            "For an internal sill not greater than 900mm, the recorded protection must satisfy the fixed bars/mesh branch or the restricted-opening branch.",
+            "The recorded protection evidence satisfies the selected branch.", "", "AS 1926.1-2007 clause 2.7(a)", card));
+        } else if (!method) {
+          result.push(decision("engine-window-branch", "review", "Window", item, "Child-resistant window branch", inputs,
+            "A child-resistant protection method is required for this low internal-sill branch.",
+            "The protection method is not recorded.",
+            "Record and verify the applicable fixed bars/mesh or restricted-opening arrangement.", "AS 1926.1-2007 clause 2.7(a)", card));
         } else {
-          result.push(decision("engine-window-branch", "review", "Window", item, "Child-resistant window branch", inputs, "A child-resistant window arrangement is required when the external sill is below 1800mm.", "The protection method is not recorded.", "Record the protection method and required dimensions/fixings.", "AS 1926.1-2007 clause 2.7", card));
+          result.push(decision("engine-window-branch", "fail", "Window", item, "Child-resistant window branch", inputs,
+            "The selected protection method must satisfy all requirements of the low internal-sill branch.",
+            "The recorded measurements/fixings do not establish compliance for the selected method.",
+            "Rectify the window restriction/protection and reassess the complete arrangement.", "AS 1926.1-2007 clause 2.7(a)", card));
         }
-      } else if (h1 !== null && h1 < 1800) {
-        result.push(decision("engine-window-branch", "review", "Window", item, "Child-resistant window branch", inputs, "Window requirements vary with both external and internal sill heights and the protection arrangement.", "This configuration needs the inspector to apply the applicable sub-branch; BarrierCheck will not infer an unrecorded arrangement.", "Complete the internal sill measurement and applicable window-protection assessment, recording the rationale where a different permitted branch is used.", "AS 1926.1-2007 clause 2.7", card));
+        return;
+      }
+
+      // h2 is greater than 900mm and less than 1200mm.
+      var flyscreenPass = method === "Securely fixed flyscreen" && tools === "Pass";
+      if (fixedBarsPass || restrictedPass || flyscreenPass) {
+        result.push(decision("engine-window-branch", "pass", "Window", item, "Child-resistant window branch", inputs,
+          "For an internal sill above 900mm but below 1200mm, the earlier protection methods remain available and a securely fixed flyscreen is also permitted when fixed with tool-removable fasteners.",
+          "The recorded protection evidence satisfies the selected middle-sill branch.", "", "AS 1926.1-2007 clause 2.7(b)", card));
+      } else if (!method) {
+        result.push(decision("engine-window-branch", "review", "Window", item, "Child-resistant window branch", inputs,
+          "This middle-sill branch requires a permitted protection method.",
+          "The protection method is not recorded.",
+          "Record and verify the applicable fixed bars/mesh, restricted opening or securely fixed flyscreen arrangement.", "AS 1926.1-2007 clause 2.7(b)", card));
+      } else {
+        result.push(decision("engine-window-branch", "fail", "Window", item, "Child-resistant window branch", inputs,
+          "The selected protection method must satisfy the applicable middle-sill branch.",
+          "The recorded protection/fixing evidence does not establish compliance.",
+          "Rectify the window protection arrangement and reassess.", "AS 1926.1-2007 clause 2.7(b)", card));
       }
     });
   }
@@ -746,6 +855,7 @@
     evaluateBoundary(decisions);
     evaluateMesh(decisions);
     evaluateNczObjects(decisions);
+    evaluateNczGeometry(decisions);
     evaluateDoors(decisions);
     evaluateWater(decisions);
     evaluateWindows(decisions);
