@@ -160,7 +160,7 @@
         return clean(source.document) + (source.clause ? ", " + clean(source.clause) : "");
       }).join("; ");
     }
-    return clean(finding.source || "BarrierCheck rule bank");
+    return clean(finding.sourceRef || finding.source || "BarrierCheck rule bank");
   }
 
   function listHtml(items) {
