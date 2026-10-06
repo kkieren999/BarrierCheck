@@ -406,3 +406,7 @@ exports.deleteMyAccount = onCall(
   { region: REGION, secrets: [trialHmacSecret] },
   handleAccountDeletion
 );
+
+
+const { createIronGateInspection } = require("./irongate-integration");
+exports.createIronGateInspection = createIronGateInspection;
