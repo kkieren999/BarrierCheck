@@ -5197,19 +5197,18 @@ function compressImageFile(file, stampLines) {
   });
 }
 
-function uploadPhotoFile(file, widget, grid) {
+function uploadPhotoFile(file, widget, grid, sourceButton) {
   if (!canUseApp() || !firebaseStorage || !currentInspectionId) {
     alert("Please open or start an inspection before adding photos.");
     return Promise.resolve();
   }
 
   var area = widget.getAttribute("data-photo-area") || "general";
-  var button = widget.querySelector(".camera-btn");
+  var button = sourceButton || widget.querySelector(".camera-btn");
+  var buttons = Array.prototype.slice.call(widget.querySelectorAll(".camera-btn, .library-btn"));
   var originalText = button ? button.textContent : "";
-  if (button) {
-    button.disabled = true;
-    button.textContent = "Uploading...";
-  }
+  buttons.forEach(function (control) { control.disabled = true; });
+  if (button) button.textContent = "Uploading...";
 
   var uploadedAt = new Date().toISOString();
   var stampLines = buildPhotoStampLines(area, uploadedAt);
@@ -5292,10 +5291,8 @@ function uploadPhotoFile(file, widget, grid) {
       alert("Could not upload photo: " + error.message);
     })
     .then(function () {
-      if (button) {
-        button.disabled = false;
-        button.textContent = originalText;
-      }
+      buttons.forEach(function (control) { control.disabled = false; });
+      if (button) button.textContent = originalText;
     });
 }
 
@@ -5369,39 +5366,74 @@ function deleteInspectionPhotosFromStorage(data) {
 function bindPhotoWidget(widget) {
   if (!widget || widget.getAttribute("data-bound") === "true") return;
 
-  widget.setAttribute("data-bound", "true");
-
   var btn = widget.querySelector(".camera-btn");
   var input = widget.querySelector('input[type="file"]');
   var grid = widget.querySelector(".photo-grid");
 
   if (!btn || !input || !grid) return;
+  widget.setAttribute("data-bound", "true");
 
-  btn.addEventListener("click", function () {
+  // The existing picker has capture="environment" so it opens the phone camera.
+  // A separate input without capture lets iOS and Android choose saved photos.
+  var libraryBtn = document.createElement("button");
+  libraryBtn.type = "button";
+  libraryBtn.className = "library-btn";
+  libraryBtn.textContent = "Choose from Library";
+
+  var libraryInput = document.createElement("input");
+  libraryInput.type = "file";
+  libraryInput.accept = "image/*";
+  libraryInput.multiple = true;
+  libraryInput.hidden = true;
+
+  var actions = document.createElement("div");
+  actions.className = "photo-actions";
+  btn.parentNode.insertBefore(actions, btn);
+  actions.appendChild(btn);
+  actions.appendChild(libraryBtn);
+  widget.insertBefore(libraryInput, grid);
+
+  btn.textContent = "Take " + btn.textContent.replace(/^\s*\+\s*/, "").trim();
+
+  function openPicker(fileInput) {
     if (!canUseApp() || !currentInspectionId) {
       alert("Please start or open an inspection before adding photos.");
       return;
     }
-    input.click();
-  });
+    fileInput.click();
+  }
 
-  input.addEventListener("change", function () {
-    var files = Array.prototype.slice.call(input.files || []);
+  function onPhotosSelected(fileInput, sourceButton) {
+    var files = Array.prototype.slice.call(fileInput.files || []);
     if (!files.length) return;
 
     var chain = Promise.resolve();
     files.forEach(function (file) {
       chain = chain.then(function () {
-        return uploadPhotoFile(file, widget, grid);
+        return uploadPhotoFile(file, widget, grid, sourceButton);
       });
     });
 
     chain.then(function () {
-      input.value = "";
+      // Allow choosing the same photo again after the upload finishes.
+      fileInput.value = "";
     });
+  }
+
+  btn.addEventListener("click", function () {
+    openPicker(input);
+  });
+  libraryBtn.addEventListener("click", function () {
+    openPicker(libraryInput);
+  });
+
+  input.addEventListener("change", function () {
+    onPhotosSelected(input, btn);
+  });
+  libraryInput.addEventListener("change", function () {
+    onPhotosSelected(libraryInput, libraryBtn);
   });
 }
-
 
 function addPhotoToGrid(grid, photoInput) {
   if (!grid || !photoInput) return;
