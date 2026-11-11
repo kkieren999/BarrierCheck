@@ -751,7 +751,8 @@ body {
 }
 
 .small-btn,
-.camera-btn {
+.camera-btn,
+.library-btn {
   border: 0;
   border-radius: 16px;
   padding: 14px 16px;
@@ -779,7 +780,15 @@ body {
   border-top: 1px solid var(--line);
 }
 
-.camera-btn {
+.photo-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.camera-btn,
+.library-btn {
   width: auto;
   min-width: 150px;
   padding: 12px 14px;
@@ -787,6 +796,11 @@ body {
   background: #ffffff;
   border: 1px solid rgba(13, 130, 216, 0.22);
   box-shadow: 0 8px 18px rgba(3, 40, 106, 0.08);
+}
+
+.library-btn {
+  background: #edf7ff;
+  color: var(--iron);
 }
 
 .photo-grid {
@@ -1596,6 +1610,7 @@ body.download-mode .button-row,
 body.download-mode .add-section-btn,
 body.download-mode .remove-section-btn,
 body.download-mode .remove-photo,
+body.download-mode .library-btn,
 body.download-mode .camera-btn {
   display: none !important;
 }
@@ -2032,6 +2047,7 @@ body.auth-checking .app-shell {
 
 
 .camera-btn:disabled,
+.library-btn:disabled,
 .login-primary-btn:disabled,
 .login-secondary-btn:disabled,
 .login-google-btn:disabled {
