@@ -1643,6 +1643,7 @@ body.download-mode .camera-btn {
   body.download-mode .add-section-btn,
   body.download-mode .remove-section-btn,
   body.download-mode .remove-photo,
+  body.download-mode .library-btn,
   body.download-mode .camera-btn,
   body.download-mode .content::before {
     display: none !important;
